@@ -27,26 +27,25 @@ Die kostenlosen Pläne (Vercel Hobby, Supabase Free) reichen für den Start.
 
 ## Hosting (ohne lokales npm)
 
-Quellcode auf GitHub: [github.com/Philipp150/I-am-fit](https://github.com/Philipp150/I-am-fit)
+Live: [i-am-super-fit.vercel.app](https://i-am-super-fit.vercel.app/)  
+Quellcode: [github.com/Philipp150/I-am-fit](https://github.com/Philipp150/I-am-fit)
 
-1. Auf [vercel.com/new](https://vercel.com/new) das GitHub-Repo **Philipp150/I-am-fit** importieren (Framework: Next.js). Der kostenlose Hobby-Plan reicht.
-2. Optional Environment Variables für Supabase setzen (siehe unten).
-3. Deployen. Danach gehen Pushes nach `main` live.
+Vercel-Projektname **i-am-super-fit**, weil `i-am-fit` schon vergeben war. Pushes nach `main` auf GitHub gehen dort live.
 
 ### Supabase (Geräte-Sync)
 
 1. Neues Projekt auf [supabase.com](https://supabase.com) anlegen.
 2. SQL-Editor öffnen und `supabase/setup.sql` vollständig ausführen (Schema + Katalog).
 3. Unter **Authentication → URL configuration**:
-   - Site URL = deine Vercel-URL
-   - Redirect URLs: `https://DEINE-DOMAIN/auth/callback`
+   - Site URL = `https://i-am-super-fit.vercel.app`
+   - Redirect URLs: `https://i-am-super-fit.vercel.app/auth/callback`
 4. Unter **Project Settings → API** merken: Project URL und `anon` / publishable key.
 5. In Vercel als Environment Variables setzen:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-NEXT_PUBLIC_SITE_URL=https://DEINE-DOMAIN.vercel.app
+NEXT_PUBLIC_SITE_URL=https://i-am-super-fit.vercel.app
 ```
 
 Ohne diese Variablen startet die App trotzdem – dann nur mit lokalem Browser-Speicher.
