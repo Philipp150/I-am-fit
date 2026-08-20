@@ -27,46 +27,27 @@ Die kostenlosen Pläne (Vercel Hobby, Supabase Free) reichen für den Start.
 
 ## Hosting (ohne lokales npm)
 
-Dieses Repo liegt auf **Cursor Origin**, nicht öffentlich auf GitHub. Vercel kann Origin-Repos direkt anbinden (Beta). Dafür braucht Vercel ein **Pro-Team** — Origin-Repos sind privat und gehen nicht über Hobby.
+Quellcode auf GitHub: [github.com/Philipp150/I-am-fit](https://github.com/Philipp150/I-am-fit)
 
-### Variante A — Origin mit Vercel verbinden (dauerhaft)
-
-1. Im Repo unter [Settings → Apps](https://cursor.com/codebase/schlag-art/I-am-fit) **Vercel** verbinden  
-   **oder** auf [vercel.com/new](https://vercel.com/new) **Continue with Origin** wählen und `I-am-fit` importieren.
-2. Framework: Next.js, Deploy.
-3. Optional Environment Variables für Supabase (siehe unten).
-4. Danach erzeugen Origin-PRs automatisch Previews, Merge nach `main` geht live.
-
-### Variante B — nur schnell öffnen
-
-Ein anonymes Deployment kann ich selbst anlegen. Es ist zeitlich begrenzt, bis du es in dein Vercel-Konto übernimmst (Claim-Link).
-
-### Variante C — GitHub-Spiegel
-
-Wenn das Repo zusätzlich auf GitHub gespiegelt ist, geht der klassische GitHub-Import bei Vercel auch auf Hobby. Cursor kann mit GitHub verbunden sein, ohne dass *dieses* Origin-Repo dort liegt.
+1. Auf [vercel.com/new](https://vercel.com/new) das GitHub-Repo **Philipp150/I-am-fit** importieren (Framework: Next.js). Der kostenlose Hobby-Plan reicht.
+2. Optional Environment Variables für Supabase setzen (siehe unten).
+3. Deployen. Danach gehen Pushes nach `main` live.
 
 ### Supabase (Geräte-Sync)
 
 1. Neues Projekt auf [supabase.com](https://supabase.com) anlegen.
 2. SQL-Editor öffnen und `supabase/setup.sql` vollständig ausführen (Schema + Katalog).
 3. Unter **Authentication → URL configuration**:
-   - Site URL = deine Vercel-URL (später eintragen, vorerst `http://localhost:3000`)
-   - Redirect URLs: `https://DEINE-DOMAIN/auth/callback` und `http://localhost:3000/auth/callback`
+   - Site URL = deine Vercel-URL
+   - Redirect URLs: `https://DEINE-DOMAIN/auth/callback`
 4. Unter **Project Settings → API** merken: Project URL und `anon` / publishable key.
-
-### 2. Vercel
-
-1. Das GitHub-Repo `schlag-art/I-am-fit` auf [vercel.com](https://vercel.com) importieren (Framework: Next.js).
-2. Environment Variables setzen:
+5. In Vercel als Environment Variables setzen:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_SITE_URL=https://DEINE-DOMAIN.vercel.app
 ```
-
-3. Deployen. Danach die Vercel-URL auch in Supabase als Site URL eintragen.
-4. In der App per E-Mail anmelden (Magic Link). Danach sind Plan und eigene Übungen geräteübergreifend.
 
 Ohne diese Variablen startet die App trotzdem – dann nur mit lokalem Browser-Speicher.
 
