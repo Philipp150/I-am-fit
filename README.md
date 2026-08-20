@@ -27,7 +27,25 @@ Die kostenlosen Pläne (Vercel Hobby, Supabase Free) reichen für den Start.
 
 ## Hosting (ohne lokales npm)
 
-### 1. Supabase
+Dieses Repo liegt auf **Cursor Origin**, nicht öffentlich auf GitHub. Vercel kann Origin-Repos direkt anbinden (Beta). Dafür braucht Vercel ein **Pro-Team** — Origin-Repos sind privat und gehen nicht über Hobby.
+
+### Variante A — Origin mit Vercel verbinden (dauerhaft)
+
+1. Im Repo unter [Settings → Apps](https://cursor.com/codebase/schlag-art/I-am-fit) **Vercel** verbinden  
+   **oder** auf [vercel.com/new](https://vercel.com/new) **Continue with Origin** wählen und `I-am-fit` importieren.
+2. Framework: Next.js, Deploy.
+3. Optional Environment Variables für Supabase (siehe unten).
+4. Danach erzeugen Origin-PRs automatisch Previews, Merge nach `main` geht live.
+
+### Variante B — nur schnell öffnen
+
+Ein anonymes Deployment kann ich selbst anlegen. Es ist zeitlich begrenzt, bis du es in dein Vercel-Konto übernimmst (Claim-Link).
+
+### Variante C — GitHub-Spiegel
+
+Wenn das Repo zusätzlich auf GitHub gespiegelt ist, geht der klassische GitHub-Import bei Vercel auch auf Hobby. Cursor kann mit GitHub verbunden sein, ohne dass *dieses* Origin-Repo dort liegt.
+
+### Supabase (Geräte-Sync)
 
 1. Neues Projekt auf [supabase.com](https://supabase.com) anlegen.
 2. SQL-Editor öffnen und `supabase/setup.sql` vollständig ausführen (Schema + Katalog).
