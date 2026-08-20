@@ -1,0 +1,121 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { ExerciseCard } from "@/components/ExerciseCard";
+import { Card, Field, fieldClass, PrimaryButton, SecondaryButton } from "@/components/ui";
+import { getDb, newId } from "@/lib/db";
+import type { DraftExercise, Exercise } from "@/lib/types";
+
+type ImportResponse = {
+  error?: string;
+  meta?: { title: string; provider: string; url: string };
+  drafts?: DraftExercise[];
+};
+
+export default function ImportPage() {
+  const router = useRouter();
+  const [url, setUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<DraftExercise[]>([]);
+  const [selected, setSelected] = useState<boolean[]>([]);
+  const [sourceLabel, setSourceLabel] = useState("");
+
+  async function analyze() {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = (await response.json()) as ImportResponse;
+      if (!response.ok || data.error || !data.drafts) {
+        throw new Error(data.error || "Import fehlgeschlagen");
+      }
+      setDrafts(data.drafts);
+      setSelected(data.drafts.map(() => true));
+      setSourceLabel(data.meta?.title ?? url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unbekannter Fehler");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function save() {
+    const now = new Date().toISOString();
+    const chosen = drafts.filter((_, index) => selected[index]);
+    let lastId = "";
+    for (const draft of chosen) {
+      const id = newId("ex");
+      lastId = id;
+      const exercise: Exercise = {
+        ...draft,
+        id,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await getDb().exercises.add(exercise);
+    }
+    if (lastId) router.push(`/catalog/${lastId}`);
+  }
+
+  const previewExercises: Exercise[] = drafts.map((draft, index) => ({
+    ...draft,
+    id: `preview-${index}`,
+    createdAt: "",
+    updatedAt: "",
+  }));
+
+  return (
+    <div className="space-y-5">
+      <h2 className="font-display text-3xl text-forest-dark">Aus einem Link ableiten</h2>
+      <p className="text-sm leading-relaxed text-ink/80">
+        Füge einen YouTube- oder Instagram-Link ein. Die App liest Titel und Beschreibung, schlägt eine oder mehrere Übungen vor und zeichnet sie als Strichfigur. Das Originalvideo bleibt außen vor.
+      </p>
+      <Field label="Link">
+        <input
+          className={fieldClass}
+          placeholder="https://youtu.be/… oder Instagram"
+          value={url}
+          onChange={(event) => setUrl(event.target.value)}
+        />
+      </Field>
+      <PrimaryButton disabled={!url || loading} onClick={analyze}>
+        {loading ? "Lesen …" : "Übungen ableiten"}
+      </PrimaryButton>
+      {error && <p className="text-sm text-clay">{error}</p>}
+      {drafts.length > 0 && (
+        <Card>
+          <h3 className="font-display text-xl">Vorschlag</h3>
+          <p className="mt-1 text-sm text-forest-light">Quelle: {sourceLabel}. Bitte prüfen und anpassen, bevor du speicherst.</p>
+          <div className="mt-4 space-y-3">
+            {previewExercises.map((exercise, index) => (
+              <label key={exercise.id} className="block">
+                <span className="mb-1 flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="accent-forest"
+                    checked={selected[index]}
+                    onChange={() => setSelected((current) => current.map((value, i) => (i === index ? !value : value)))}
+                  />
+                  Übernehmen
+                </span>
+                <ExerciseCard exercise={exercise} interactive={false} />
+              </label>
+            ))}
+          </div>
+          <div className="mt-4 flex gap-2">
+            <PrimaryButton disabled={!selected.some(Boolean)} onClick={save}>
+              Ausgewählte speichern
+            </PrimaryButton>
+            <SecondaryButton onClick={() => setDrafts([])}>Verwerfen</SecondaryButton>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
