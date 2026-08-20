@@ -5,7 +5,7 @@ import { useState } from "react";
 import { CategoryPicker } from "@/components/CategoryPicker";
 import { StickFigure } from "@/components/StickFigure";
 import { Card, Field, fieldClass, PrimaryButton } from "@/components/ui";
-import { getDb, newId } from "@/lib/db";
+import { saveExercise, newId } from "@/lib/repository";
 import { useCategories, useComplaints } from "@/lib/hooks";
 import { POSE_IDS, POSE_LABELS } from "@/lib/poses";
 import type { ExerciseKind, ExerciseStep, PoseId, SuggestedRhythm } from "@/lib/types";
@@ -40,7 +40,7 @@ export default function NewExercisePage() {
     };
     const id = newId("ex");
     const now = new Date().toISOString();
-    await getDb().exercises.add({
+    await saveExercise({
       id,
       title: title.trim(),
       summary: summary.trim() || "Eigene Übung.",

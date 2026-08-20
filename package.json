@@ -9,10 +9,13 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "cap:sync": "cap sync"
+    "cap:sync": "cap sync",
+    "seed:sql": "npx tsx scripts/generate-seed.ts && cat supabase/schema.sql supabase/seed.sql > supabase/setup.sql"
   },
   "dependencies": {
     "@capacitor/core": "^7.4.2",
+    "@supabase/ssr": "^0.12.4",
+    "@supabase/supabase-js": "^2.112.3",
     "dexie": "^4.0.11",
     "dexie-react-hooks": "^1.1.7",
     "lucide-react": "^0.525.0",

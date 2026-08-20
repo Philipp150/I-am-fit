@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AuthBanner } from "@/components/AuthBanner";
 import { BookOpen, CalendarDays, HeartPulse, Sparkles } from "lucide-react";
 
 const NAV = [
@@ -22,6 +23,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div>
           <p className="text-xs uppercase tracking-[0.22em] text-forest-light">I am fit</p>
           <h1 className="font-display text-3xl font-medium tracking-tight text-forest-dark">Dabei bleiben</h1>
+          <div className="mt-2">
+            <AuthBanner />
+          </div>
         </div>
         <Link href="/progress" className="text-sm text-forest underline-offset-4 hover:underline">
           Verlauf

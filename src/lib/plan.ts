@@ -1,13 +1,12 @@
 import { addDays, isoDate } from "./schedule";
-import { getDb, newId } from "./db";
+import { newId, listPlanItems, savePlanItem, addCompletion } from "./repository";
 import type { Exercise, PlanItem, RhythmKind } from "./types";
 
 export async function addExerciseToPlan(
   exercise: Exercise,
   overrides?: Partial<Pick<PlanItem, "rhythm" | "durationSec" | "keepUntil">>,
 ): Promise<string> {
-  const db = getDb();
-  const existing = await db.planItems.where("exerciseId").equals(exercise.id).first();
+  const existing = (await listPlanItems()).find((item) => item.exerciseId === exercise.id);
   const keepUntil =
     overrides?.keepUntil !== undefined
       ? overrides.keepUntil
@@ -21,7 +20,8 @@ export async function addExerciseToPlan(
     startDate: isoDate(new Date()),
   };
   if (existing) {
-    await db.planItems.update(existing.id, {
+    await savePlanItem({
+      ...existing,
       enabled: true,
       rhythm,
       durationSec: overrides?.durationSec ?? exercise.defaultDurationSec,
@@ -30,7 +30,7 @@ export async function addExerciseToPlan(
     return existing.id;
   }
   const id = newId("plan");
-  await db.planItems.add({
+  await savePlanItem({
     id,
     exerciseId: exercise.id,
     enabled: true,
@@ -43,7 +43,7 @@ export async function addExerciseToPlan(
 }
 
 export async function markComplete(exerciseId: string, planItemId?: string, durationSec?: number) {
-  await getDb().completions.add({
+  await addCompletion({
     id: newId("done"),
     exerciseId,
     planItemId,
@@ -53,7 +53,7 @@ export async function markComplete(exerciseId: string, planItemId?: string, dura
 }
 
 export async function markSkipped(exerciseId: string, planItemId?: string) {
-  await getDb().completions.add({
+  await addCompletion({
     id: newId("skip"),
     exerciseId,
     planItemId,

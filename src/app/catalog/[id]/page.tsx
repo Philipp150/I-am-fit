@@ -8,7 +8,7 @@ import { categoryPathLabel } from "@/lib/categories";
 import { useCategories, useComplaints, useExercise, usePlanItems } from "@/lib/hooks";
 import { addExerciseToPlan } from "@/lib/plan";
 import { formatDuration, rhythmLabel } from "@/lib/schedule";
-import { getDb } from "@/lib/db";
+import { deleteExercise } from "@/lib/repository";
 
 export default function ExerciseDetailPage() {
   const params = useParams<{ id: string }>();
@@ -33,10 +33,7 @@ export default function ExerciseDetailPage() {
   async function remove() {
     if (current.isSystem) return;
     if (!confirm("Diese eigene Übung löschen?")) return;
-    const db = getDb();
-    await db.exercises.delete(current.id);
-    const related = await db.planItems.where("exerciseId").equals(current.id).toArray();
-    await db.planItems.bulkDelete(related.map((item) => item.id));
+    await deleteExercise(current.id);
     router.push("/catalog");
   }
 

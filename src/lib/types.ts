@@ -103,7 +103,7 @@ export type Completion = {
 };
 
 export type Profile = {
-  id: "solo";
+  id: string;
   displayName: string;
   reminderEnabled: boolean;
   reminderTime: string;

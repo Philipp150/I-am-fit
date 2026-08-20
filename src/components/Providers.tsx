@@ -2,7 +2,8 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { ensureSeeded } from "@/lib/db";
+import { isCloudEnabled } from "@/lib/env";
+import { bootstrap } from "@/lib/repository";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
@@ -10,7 +11,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    ensureSeeded()
+    bootstrap()
       .then(() => {
         if (active) setReady(true);
       })
@@ -28,7 +29,7 @@ export function Providers({ children }: { children: ReactNode }) {
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center p-6 text-center">
-        <p>Die lokale Sammlung konnte nicht geladen werden. {error}</p>
+        <p>Die Sammlung konnte nicht geladen werden. {error}</p>
       </div>
     );
   }
@@ -37,7 +38,9 @@ export function Providers({ children }: { children: ReactNode }) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3">
         <div className="h-12 w-12 animate-pulse rounded-full bg-forest" />
-        <p className="text-sm text-forest-light">Sammlung wird vorbereitet …</p>
+        <p className="text-sm text-forest-light">
+          {isCloudEnabled() ? "Cloud-Sammlung wird vorbereitet …" : "Sammlung wird vorbereitet …"}
+        </p>
       </div>
     );
   }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { RhythmFields, type RhythmValue } from "@/components/RhythmFields";
 import { Card, fieldClass, Field, PrimaryButton, SecondaryButton } from "@/components/ui";
-import { getDb } from "@/lib/db";
+import { savePlanItem, deletePlanItem } from "@/lib/repository";
 import { useExercises, usePlanItems } from "@/lib/hooks";
 import { formatDuration, isPlanItemDueOn, rhythmLabel } from "@/lib/schedule";
 import type { PlanItem } from "@/lib/types";
@@ -52,7 +52,7 @@ export default function PlanPage() {
                     type="checkbox"
                     className="mr-1 accent-forest"
                     checked={item.enabled}
-                    onChange={(event) => getDb().planItems.update(item.id, { enabled: event.target.checked })}
+                    onChange={(event) => savePlanItem({ ...item, enabled: event.target.checked })}
                   />
                   aktiv
                 </label>
@@ -82,7 +82,8 @@ function EditPlan({ item, onClose }: { item: PlanItem; onClose: () => void }) {
   const [durationSec, setDurationSec] = useState(item.durationSec ?? 60);
 
   async function save() {
-    await getDb().planItems.update(item.id, {
+    await savePlanItem({
+      ...item,
       rhythm: { ...item.rhythm, ...rhythm },
       keepUntil,
       durationSec,
@@ -91,7 +92,7 @@ function EditPlan({ item, onClose }: { item: PlanItem; onClose: () => void }) {
   }
 
   async function remove() {
-    await getDb().planItems.delete(item.id);
+    await deletePlanItem(item.id);
     onClose();
   }
 

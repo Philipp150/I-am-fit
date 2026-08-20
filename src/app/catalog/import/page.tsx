@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import { Card, Field, fieldClass, PrimaryButton, SecondaryButton } from "@/components/ui";
-import { getDb, newId } from "@/lib/db";
+import { newId, saveExercise } from "@/lib/repository";
 import type { DraftExercise, Exercise } from "@/lib/types";
 
 type ImportResponse = {
@@ -58,7 +58,7 @@ export default function ImportPage() {
         createdAt: now,
         updatedAt: now,
       };
-      await getDb().exercises.add(exercise);
+      await saveExercise(exercise);
     }
     if (lastId) router.push(`/catalog/${lastId}`);
   }

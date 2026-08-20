@@ -1,15 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Card, Field, fieldClass, PrimaryButton } from "@/components/ui";
-import { getDb } from "@/lib/db";
-import { useCompletions, useExercises, useProfile } from "@/lib/hooks";
+import { Card, Field, fieldClass, PrimaryButton, SecondaryButton } from "@/components/ui";
+import { isCloudEnabled } from "@/lib/env";
+import { useCompletions, useExercises, useProfile, useSession } from "@/lib/hooks";
+import { saveProfile, signOut } from "@/lib/repository";
 import { addDays, isoDate, startOfDay, streakLength } from "@/lib/schedule";
 
 export default function ProgressPage() {
   const completions = useCompletions();
   const exercises = useExercises();
   const profile = useProfile();
+  const session = useSession();
   const [name, setName] = useState("");
   const today = useMemo(() => new Date(), []);
   const days = useMemo(
@@ -26,13 +29,39 @@ export default function ProgressPage() {
   }, [profile?.displayName]);
 
   async function saveName() {
-    if (!profile) return;
-    await getDb().profile.put({ ...profile, displayName: name.trim() });
+    const base = profile ?? {
+      id: session?.id ?? "solo",
+      displayName: "",
+      reminderEnabled: true,
+      reminderTime: "08:30",
+      createdAt: new Date().toISOString(),
+    };
+    await saveProfile({ ...base, displayName: name.trim() });
   }
 
   return (
     <div className="space-y-5">
       <h2 className="font-display text-3xl text-forest-dark">Verlauf</h2>
+      {isCloudEnabled() && (
+        <Card>
+          <h3 className="font-display text-xl">Konto</h3>
+          {session ? (
+            <>
+              <p className="mt-2 text-sm">Angemeldet{session.email ? ` als ${session.email}` : ""}. Plan und eigene Übungen liegen in Supabase und sind auf PC und Handy gleich.</p>
+              <SecondaryButton className="mt-3" onClick={() => signOut()}>
+                Abmelden
+              </SecondaryButton>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-sm">Ohne Anmeldung siehst du den Katalog, aber der Plan bleibt nicht geräteübergreifend.</p>
+              <Link href="/auth" className="mt-3 inline-flex rounded-full bg-forest px-5 py-3 text-sm text-cream">
+                Per E-Mail anmelden
+              </Link>
+            </>
+          )}
+        </Card>
+      )}
       <Card>
         <p className="text-sm text-forest-light">Aktuelle Serie</p>
         <p className="font-display text-4xl text-forest-dark">{streak} Tage</p>
@@ -71,7 +100,11 @@ export default function ProgressPage() {
         <PrimaryButton className="mt-3" onClick={saveName}>
           Speichern
         </PrimaryButton>
-        <p className="mt-3 text-xs text-forest-light">Alles bleibt in diesem Browser (und in der installierten App). Kein Konto nötig.</p>
+        <p className="mt-3 text-xs text-forest-light">
+          {isCloudEnabled()
+            ? "Mit Konto liegen Name, Plan und Verlauf in Supabase."
+            : "Ohne Cloud bleibt alles in diesem Browser."}
+        </p>
       </Card>
     </div>
   );

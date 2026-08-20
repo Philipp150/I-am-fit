@@ -4,40 +4,69 @@ Tägliche Übungen, Mantras und Rituale – nicht als Fitness-Zwang, sondern als
 
 Die App läuft im Browser und lässt sich auf dem Handy als App ablegen (PWA). Dieselbe Oberfläche ist die Basis für Android- und iOS-Hüllen mit Capacitor.
 
-## Was sie kann
+## Vercel und Supabase – wer macht was?
+
+| Dienst | Rolle |
+| --- | --- |
+| **Vercel** | Hostet die Next.js-App. Du öffnest eine URL auf dem PC oder Handy, ohne `npm run`. Die Import-API (YouTube/Instagram) läuft dort mit. |
+| **Supabase** | Datenbank + Anmeldung. Katalog, eigene Übungen, Plan und Verlauf liegen in der Cloud – PC und Handy sehen denselben Stand. |
+
+Ohne Vercel bleibt die App nur lokal auf einem Rechner mit Node. Ohne Supabase speichert sie nur in **diesem einen Browser** (IndexedDB). Für den Alltag auf PC **und** Handy braucht es beides.
+
+Die kostenlosen Pläne (Vercel Hobby, Supabase Free) reichen für den Start.
+
+## Was die App kann
 
 - **Sammlung** mit hierarchischen Kategorien (Eltern/Kinder) und mehreren Tags pro Übung
 - **Katalog + eigene Übungen**: Bewegung, Atem, Mantras, Achtsamkeit
 - **Erklärung** als Text plus einheitliche Strichfigur; Schritte aneinandergereiht wirken wie ein kurzes Video
-- **Import** von YouTube- oder Instagram-Links: Titel und Beschreibung werden gelesen, eine oder mehrere Übungen vorgeschlagen und als Strichfigur neu gezeichnet – das Originalvideo wird nicht übernommen
-- **Übungsplan** mit Rhythmus (täglich, Wochentage, bestimmte Tage, alle n Tage) und optionalem Enddatum
-- **Vorschlag**, wie lange eine Übung im Plan bleiben sollte
-- **Beschwerden** wie Nacken, Rücken, Stress – dazu passende Übungen
-- **Heute-Ansicht** mit Serie und sanfter Erinnerung, ohne Schuldgefühl beim Auslassen
+- **Import** von YouTube- oder Instagram-Links: Titel und Beschreibung werden gelesen, eine oder mehrere Übungen vorgeschlagen und als Strichfigur neu gezeichnet
+- **Übungsplan** mit Rhythmus und optionalem Zeitraum
+- **Beschwerden** mit passenden Übungsvorschlägen
+- **Heute-Ansicht** mit Serie, ohne Schuldgefühl beim Auslassen
 
-Daten liegen lokal im Browser (IndexedDB). Es gibt kein Pflichtkonto.
+## Hosting (ohne lokales npm)
+
+### 1. Supabase
+
+1. Neues Projekt auf [supabase.com](https://supabase.com) anlegen.
+2. SQL-Editor öffnen und `supabase/setup.sql` vollständig ausführen (Schema + Katalog).
+3. Unter **Authentication → URL configuration**:
+   - Site URL = deine Vercel-URL (später eintragen, vorerst `http://localhost:3000`)
+   - Redirect URLs: `https://DEINE-DOMAIN/auth/callback` und `http://localhost:3000/auth/callback`
+4. Unter **Project Settings → API** merken: Project URL und `anon` / publishable key.
+
+### 2. Vercel
+
+1. Das GitHub-Repo `schlag-art/I-am-fit` auf [vercel.com](https://vercel.com) importieren (Framework: Next.js).
+2. Environment Variables setzen:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SITE_URL=https://DEINE-DOMAIN.vercel.app
+```
+
+3. Deployen. Danach die Vercel-URL auch in Supabase als Site URL eintragen.
+4. In der App per E-Mail anmelden (Magic Link). Danach sind Plan und eigene Übungen geräteübergreifend.
+
+Ohne diese Variablen startet die App trotzdem – dann nur mit lokalem Browser-Speicher.
 
 ## Entwicklung
 
 ```bash
 npm install
+cp .env.example .env.local
 npm test
 npm run dev
 ```
 
-Öffne [http://localhost:3000](http://localhost:3000).
-
-```bash
-npm run build
-npm start
-```
+Katalog-SQL neu erzeugen: `npm run seed:sql` (danach `schema.sql` und `seed.sql` zu `setup.sql` zusammenfügen).
 
 ## Aufs Handy
 
-Im mobilen Browser: *Zum Home-Bildschirm* / *Als App installieren*. Die PWA nutzt denselben Standalone-Modus auf Android und iOS.
-
-Für Store-Builds ist Capacitor vorbereitet (`capacitor.config.ts`, App-ID `art.schlag.iamfit`). Die Web-App sollte gehostet werden, damit der Link-Import (API-Route) erreichbar bleibt; die native Hülle zeigt dann diese URL.
+Im mobilen Browser: *Zum Home-Bildschirm* / *Als App installieren*. Nach dem Login über Vercel+Supabase ist der Plan derselbe wie am PC.
 
 ## Hinweis zum Import
 
-YouTube und Instagram liefern Metadaten, keine vollständige Videoanalyse. Die App leitet daraus Schritte und Haltungen ab und zeigt nur die eigene Figur. Prüfe Vorschläge vor dem Speichern.
+YouTube und Instagram liefern Metadaten, keine vollständige Videoanalyse. Die App zeigt nur die eigene Figur. Prüfe Vorschläge vor dem Speichern.
