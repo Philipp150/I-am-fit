@@ -10,7 +10,7 @@ import type { DraftExercise, Exercise } from "@/lib/types";
 type ImportResponse = {
   error?: string;
   code?: string;
-  meta?: { title: string; provider: string; url: string };
+  meta?: { title: string; provider: string; url: string; usedCaptions?: boolean };
   drafts?: DraftExercise[];
 };
 
@@ -22,6 +22,7 @@ export default function ImportPage() {
   const [drafts, setDrafts] = useState<DraftExercise[]>([]);
   const [selected, setSelected] = useState<boolean[]>([]);
   const [sourceLabel, setSourceLabel] = useState("");
+  const [usedCaptions, setUsedCaptions] = useState(false);
 
   async function analyze() {
     setLoading(true);
@@ -42,6 +43,7 @@ export default function ImportPage() {
       setDrafts(data.drafts);
       setSelected(data.drafts.map(() => true));
       setSourceLabel(data.meta?.title ?? url);
+      setUsedCaptions(Boolean(data.meta?.usedCaptions));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unbekannter Fehler");
     } finally {
@@ -78,7 +80,7 @@ export default function ImportPage() {
     <div className="space-y-5">
       <h2 className="font-display text-3xl text-forest-dark">Aus einem Link ableiten</h2>
       <p className="text-sm leading-relaxed text-ink/80">
-        Füge einen YouTube- oder Instagram-Link ein. Die App liest Titel und Beschreibung, schlägt eine oder mehrere Übungen vor und zeichnet sie als Strichfigur. Das Originalvideo bleibt außen vor.
+        Füge einen YouTube- oder Instagram-Link ein. Die App liest öffentlich verfügbare Titel, Beschreibungen und Untertitel – wenn sie erreichbar sind – und schlägt daraus Übungen für unsere Figur vor. Das ist keine Bild-für-Bild-Videoanalyse. Das Originalvideo kannst du später zusätzlich abspielen; die Anleitung bleibt die Figur mit Schritten.
       </p>
       <Field label="Link">
         <input
@@ -89,7 +91,7 @@ export default function ImportPage() {
         />
       </Field>
       <PrimaryButton disabled={!url || loading} onClick={analyze}>
-        {loading ? "Lesen …" : "Übungen ableiten"}
+        {loading ? "Quelle lesen …" : "Übungen ableiten"}
       </PrimaryButton>
       {error && (
         <p className="rounded-2xl bg-clay/15 px-4 py-3 text-sm text-forest-dark" role="alert">
@@ -99,7 +101,13 @@ export default function ImportPage() {
       {drafts.length > 0 && (
         <Card>
           <h3 className="font-display text-xl">Vorschlag</h3>
-          <p className="mt-1 text-sm text-forest-light">Quelle: {sourceLabel}. Bitte prüfen und anpassen, bevor du speicherst.</p>
+          <p className="mt-1 text-sm text-forest-light">
+            Quelle: {sourceLabel}.{" "}
+            {usedCaptions
+              ? "Öffentliche Untertitel wurden mitgelesen, danach zeichnen wir unsere Figur."
+              : "Titel und Beschreibung wurden gelesen. Öffentliche Untertitel lagen nicht vor oder waren nicht erreichbar."}{" "}
+            Bitte prüfen, bevor du speicherst. Das Originalvideo kannst du später zusätzlich ansehen.
+          </p>
           <div className="mt-4 space-y-3">
             {previewExercises.map((exercise, index) => (
               <label key={exercise.id} className="block">
@@ -120,7 +128,14 @@ export default function ImportPage() {
             <PrimaryButton disabled={!selected.some(Boolean)} onClick={save}>
               Ausgewählte speichern
             </PrimaryButton>
-            <SecondaryButton onClick={() => setDrafts([])}>Verwerfen</SecondaryButton>
+            <SecondaryButton
+              onClick={() => {
+                setDrafts([]);
+                setUsedCaptions(false);
+              }}
+            >
+              Verwerfen
+            </SecondaryButton>
           </div>
         </Card>
       )}

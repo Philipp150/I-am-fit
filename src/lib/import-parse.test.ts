@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  composeImportMeta,
   deriveExercisesFromMeta,
   detectProvider,
   extractNumberedItems,
@@ -29,6 +30,11 @@ describe("import parsing", () => {
   it("splits numbered lists into candidate titles", () => {
     const text = `Heute:\n1. Katze-Kuh\n2. Kindeshaltung\n- Bonus`;
     expect(extractNumberedItems(text)).toEqual(["Katze-Kuh", "Kindeshaltung", "Bonus"]);
+    expect(extractNumberedItems("1. Schultern hoch 2. Nacken neigen 3. Kiefer lösen")).toEqual([
+      "Schultern hoch",
+      "Nacken neigen",
+      "Kiefer lösen",
+    ]);
   });
 
   it("derives a mantra instead of a workout from matching language", () => {
@@ -42,6 +48,45 @@ describe("import parsing", () => {
     expect(drafts[0].kind).toBe("mantra");
     expect(drafts[0].source.type).toBe("import");
     expect(drafts[0].steps.every((step) => step.pose)).toBe(true);
+    expect(drafts[0].source.url).toBe("https://www.youtube.com/watch?v=1");
+    expect(drafts[0].source.provider).toBe("youtube");
+  });
+
+  it("uses public captions for numbered steps and stores thumbnail plus provider", () => {
+    const drafts = deriveExercisesFromMeta({
+      url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      provider: "youtube",
+      title: "Nacken am Schreibtisch",
+      description: "Kurzes Video.",
+      captions: "Heute:\n1. Schultern hochziehen\n2. Nacken neigen\n3. Kiefer lösen",
+      thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+      author: "Studio Wald",
+    });
+    expect(drafts).toHaveLength(3);
+    expect(drafts[0].title).toBe("Schultern hochziehen");
+    expect(drafts[0].source.provider).toBe("youtube");
+    expect(drafts[0].source.thumbnailUrl).toContain("hqdefault");
+    expect(drafts[1].title).toBe("Nacken neigen");
+  });
+
+  it("composes oembed title, author and thumbnail over page meta", () => {
+    const meta = composeImportMeta({
+      url: "https://youtu.be/dQw4w9WgXcQ",
+      provider: "youtube",
+      oembed: {
+        title: "oEmbed Titel",
+        author_name: "Kanal",
+        thumbnail_url: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+      },
+      page: { title: "HTML Titel", description: "Beschreibung aus der Seite, lang genug." },
+      captions: "Atme ein. Atme aus.",
+    });
+    expect(meta.title).toBe("oEmbed Titel");
+    expect(meta.author).toBe("Kanal");
+    expect(meta.thumbnailUrl).toContain("hqdefault");
+    expect(meta.description).toContain("Beschreibung");
+    expect(meta.captions).toContain("Atme ein");
+    expect(hasUsableMeta(meta)).toBe(true);
   });
 
   it("creates several stick-figure exercises from a counted title", () => {

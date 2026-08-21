@@ -110,3 +110,7 @@ Neue Arbeit wird **unten in TODO.md angehängt**. Fertiges wird dort nur abgehak
 | [README.md](README.md) | Nutzung, Hosting, Entwicklung |
 | [PROJEKTPLAN.md](PROJEKTPLAN.md) | Dieses Dokument |
 | [TODO.md](TODO.md) | Arbeitsliste (nur abhaken, nie löschen) |
+
+## 8. Nachtrag: Originalvideo als Zusatz
+
+Die Anleitung (Schritte + App-Figur) bleibt die Hauptansicht. Import liest öffentlich verfügbare Titel, Beschreibung und YouTube-Untertitel, wenn sie ohne API-Key erreichbar sind – keine Frame-Analyse. YouTube kann nach „Video ansehen“ über youtube-nocookie eingebettet werden (Click-to-Play). Instagram wird verlinkt („Auf Instagram öffnen“) plus Thumbnail aus og-Daten, wenn vorhanden. Andere Links öffnen im Browser.

@@ -73,3 +73,12 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] Hosting-Unterschied Vercel vs. Supabase beschreiben
 - [x] Hinweis: Import ist Metadaten, keine Videoanalyse
 - [x] Projektplan nach größeren Phasen aktualisieren (nur ergänzen, Todo nicht leeren)
+
+## Originalvideo und Import-Qualität
+
+- [x] Originalvideo zusätzlich in Practice und Katalog zeigen (Anleitung/PosePlayer bleibt primär)
+- [x] YouTube: youtube-nocookie-Embed erst nach Tipp auf „Video ansehen“
+- [x] Instagram: „Auf Instagram öffnen“ plus Thumbnail aus og-Daten, kein privates-API-Scraping
+- [x] Import liest oEmbed, HTML-Meta und öffentliche YouTube-Untertitel/Beschreibung für bessere Schritte
+- [x] Unit-Tests für YouTube-URL → Embed-ID; Import-Parse bleibt grün
+- [x] UI ehrlich: öffentlich verfügbare Texte, danach unsere Figur; Original nur zusätzlich

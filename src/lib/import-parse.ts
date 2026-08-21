@@ -1,11 +1,23 @@
+import type { ExtractedMeta } from "./extract-meta";
+import { parseYoutubeVideoId, youtubeThumbnailUrl } from "./source-video";
 import type { DraftExercise, ExerciseKind, PoseId, SuggestedRhythm } from "./types";
+
+export type ImportProvider = "youtube" | "instagram" | "web";
 
 export type ImportMeta = {
   url: string;
-  provider: "youtube" | "instagram" | "web";
+  provider: ImportProvider;
   title: string;
   description: string;
   author?: string;
+  thumbnailUrl?: string;
+  captions?: string;
+};
+
+export type OEmbedMeta = {
+  title?: string;
+  author_name?: string;
+  thumbnail_url?: string;
 };
 
 const KIND_KEYWORDS: Array<{ kind: ExerciseKind; pattern: RegExp }> = [
@@ -92,8 +104,40 @@ export const IMPORT_MESSAGES: Record<ImportErrorCode, string> = {
   fetch_failed:
     "Der Link konnte nicht gelesen werden. Prüfe, ob er öffentlich erreichbar ist, und versuche es erneut.",
   missing_meta:
-    "Zu diesem Link fehlen verwertbare Metadaten (Titel oder Beschreibung). Ein privates, geblocktes oder sehr kurzes Video lässt sich so nicht ableiten.",
+    "Zu diesem Link fehlen verwertbare öffentliche Texte (Titel, Beschreibung oder Untertitel). Ein privates, geblocktes oder sehr kurzes Video lässt sich so nicht ableiten.",
 };
+
+export function providerLabel(provider: ImportProvider): string {
+  if (provider === "youtube") return "YouTube";
+  if (provider === "instagram") return "Instagram";
+  return "dem Link";
+}
+
+export function composeImportMeta(input: {
+  url: string;
+  provider: ImportProvider;
+  oembed?: OEmbedMeta | null;
+  page?: ExtractedMeta | null;
+  captions?: string;
+}): ImportMeta {
+  const title = (input.oembed?.title || input.page?.title || "").trim();
+  const description = (input.page?.description || "").trim();
+  const author = (input.oembed?.author_name || input.page?.author)?.trim() || undefined;
+  const videoId = input.provider === "youtube" ? parseYoutubeVideoId(input.url) : null;
+  const thumbnailUrl =
+    (input.oembed?.thumbnail_url || input.page?.thumbnailUrl || (videoId ? youtubeThumbnailUrl(videoId) : "")).trim() ||
+    undefined;
+  const captions = input.captions?.trim() || undefined;
+  return {
+    url: input.url,
+    provider: input.provider,
+    title,
+    description,
+    author,
+    thumbnailUrl,
+    captions,
+  };
+}
 
 export function detectProvider(url: string): ImportMeta["provider"] {
   if (/youtube\.com|youtu\.be/i.test(url)) return "youtube";
@@ -130,10 +174,12 @@ export function looksLikeHostnameTitle(title: string, url: string): boolean {
   }
 }
 
-export function hasUsableMeta(meta: Pick<ImportMeta, "title" | "description" | "url">): boolean {
+export function hasUsableMeta(meta: Pick<ImportMeta, "title" | "description" | "url" | "captions">): boolean {
   const title = meta.title.trim();
   const description = meta.description.trim();
+  const captions = (meta.captions ?? "").trim();
   if (title.length >= 3 && description.length >= 8) return true;
+  if (title.length >= 3 && captions.length >= 8) return true;
   if (title.length >= 8 && !looksLikeHostnameTitle(title, meta.url)) return true;
   return false;
 }
@@ -148,7 +194,11 @@ export function extractNumberedItems(text: string): string[] {
     .filter((match): match is RegExpMatchArray => Boolean(match))
     .map((match) => match[1].replace(/\s+/g, " ").trim())
     .filter((item) => item.length > 2);
-  return numbered;
+  if (numbered.length > 0) return numbered;
+  const inline = [...text.matchAll(/(?:^|\s)(\d{1,2})[).]\s+(.+?)(?=(?:\s+\d{1,2}[).]\s+)|$)/g)]
+    .map((match) => match[2].replace(/\s+/g, " ").trim())
+    .filter((item) => item.length > 2);
+  return inline.length >= 2 ? inline : [];
 }
 
 export function guessKind(text: string): ExerciseKind {
@@ -211,21 +261,50 @@ export function suggestedRhythmFor(kind: ExerciseKind, text: string): SuggestedR
   };
 }
 
-function toSteps(title: string, description: string, poses: PoseId[]) {
-  const snippet = description.replace(/\s+/g, " ").trim().slice(0, 180);
-  return poses.map((pose, index) => ({
-    pose,
-    durationSec: 8,
-    text:
-      index === 0
-        ? `${title}. ${snippet || "Bewege dich langsam und in deinem Tempo."}`
-        : `Schritt ${index + 1}: Haltung halten, atmen, nicht das Originalvideo kopieren – nur die Bewegung in der einheitlichen Figur.`,
-  }));
+function splitGuidance(text: string, count: number): string[] {
+  if (!text.trim() || count <= 0) return [];
+  const sentences = text
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter((line) => line.length > 8);
+  if (sentences.length === 0) return [];
+  if (sentences.length <= count) {
+    return Array.from({ length: count }, (_, index) => (sentences[index] ?? "").slice(0, 180));
+  }
+  const chunk = Math.max(1, Math.floor(sentences.length / count));
+  return Array.from({ length: count }, (_, index) => {
+    const start = index * chunk;
+    const end = index === count - 1 ? sentences.length : start + chunk;
+    return sentences.slice(start, end).join(" ").slice(0, 180);
+  });
+}
+
+function toSteps(title: string, guidance: string, poses: PoseId[]) {
+  const snippet = guidance.replace(/\s+/g, " ").trim().slice(0, 180);
+  const extras = splitGuidance(guidance, poses.length);
+  return poses.map((pose, index) => {
+    const extra = extras[index]?.trim();
+    return {
+      pose,
+      durationSec: 8,
+      text:
+        extra && extra.length > 2
+          ? index === 0
+            ? `${title}. ${extra}`
+            : `Schritt ${index + 1}: ${extra}`
+          : index === 0
+            ? `${title}. ${snippet || "Bewege dich langsam und in deinem Tempo."}`
+            : `Schritt ${index + 1}: Haltung halten, atmen, in deinem Tempo. Die Figur führt – das Originalvideo ist nur zusätzlich.`,
+    };
+  });
 }
 
 export function deriveExercisesFromMeta(meta: ImportMeta): DraftExercise[] {
-  const blob = `${meta.title}\n${meta.description}`;
-  const numbered = extractNumberedItems(meta.description);
+  const blob = [meta.title, meta.description, meta.captions].filter(Boolean).join("\n");
+  const numbered =
+    extractNumberedItems(meta.description).length > 0
+      ? extractNumberedItems(meta.description)
+      : extractNumberedItems(meta.captions ?? "");
   const countMatch = meta.title.match(/(\d+)\s*(übungen|exercises|moves|asana)/i);
   const wanted = numbered.length || (countMatch ? Math.min(8, Number(countMatch[1])) : 1);
   const items =
@@ -234,6 +313,8 @@ export function deriveExercisesFromMeta(meta: ImportMeta): DraftExercise[] {
       : wanted > 1
         ? Array.from({ length: wanted }, (_, index) => `${meta.title} – Teil ${index + 1}`)
         : [meta.title];
+  const guidance = [meta.description, meta.captions].filter(Boolean).join("\n");
+  const origin = providerLabel(meta.provider);
 
   return items.map((itemTitle) => {
     const text = `${itemTitle}\n${blob}`;
@@ -243,17 +324,21 @@ export function deriveExercisesFromMeta(meta: ImportMeta): DraftExercise[] {
       title: itemTitle.slice(0, 80),
       summary:
         meta.description.replace(/\s+/g, " ").trim().slice(0, 160) ||
-        `Aus ${meta.provider === "youtube" ? "YouTube" : meta.provider === "instagram" ? "Instagram" : "dem Link"} abgeleitet und als Strichfigur neu gezeichnet.`,
+        (meta.captions
+          ? `Aus ${origin} gelesen (Titel und öffentliche Untertitel) und als App-Figur neu gezeichnet.`
+          : `Aus ${origin} gelesen (Titel und Beschreibung) und als App-Figur neu gezeichnet.`),
       kind,
       categoryIds: guessCategoryIds(text),
       complaintIds: guessComplaintIds(text),
-      steps: toSteps(itemTitle, meta.description, poses),
+      steps: toSteps(itemTitle, guidance, poses),
       defaultDurationSec: Math.max(45, poses.length * 12),
       suggestedRhythm: suggestedRhythmFor(kind, text),
       source: {
         type: "import",
         url: meta.url,
         label: meta.author ? `${meta.title} · ${meta.author}` : meta.title,
+        provider: meta.provider,
+        thumbnailUrl: meta.thumbnailUrl,
       },
       isSystem: false,
     } satisfies DraftExercise;

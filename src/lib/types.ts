@@ -89,6 +89,8 @@ export type Exercise = {
     type: "catalog" | "user" | "import";
     url?: string;
     label?: string;
+    provider?: "youtube" | "instagram" | "web";
+    thumbnailUrl?: string;
   };
   isSystem: boolean;
   createdAt: string;
