@@ -1,0 +1,6 @@
+---
+description: Projektplan und TODO.md vor der Arbeit lesen, danach fortschreiben.
+alwaysApply: true
+---
+
+Vor jeder Aufgabe `PROJEKTPLAN.md` und `TODO.md` lesen. Danach beides aktualisieren: in `TODO.md` nur abhaken oder unten in der passenden Sektion anhängen, Zeilen nie löschen. `TODO.md` nie löschen. Diese Datei (`.cursor/rules/projektplan-todo.mdc`) nie neu erzeugen oder überschreiben. Keine Secrets in Regeln, Docs oder Commits.

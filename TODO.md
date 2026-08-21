@@ -36,6 +36,8 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] Mehrere benannte Übungspläne (eigene und empfangene), einer davon aktiv für Heute
 - [x] Urheber sichtbar (Name/E-Mail der Person, die den Plan erstellt oder geschickt hat)
 - [x] Plan per E-Mail einladen: Inbox in der App, Annehmen als Kopie, Ablehnen; ohne Cloud klarer Hinweis
+- [x] Practice-Figur: gegliederte männliche Gliederpuppe (Torso, Gelenke) statt reiner Strichfigur
+- [x] Live-Supabase: Tabellen `plans` und `plan_invites` existieren (setup.sql auf dem Projekt ausgeführt; keine Secrets im Repo)
 
 ## Qualität und Betrieb
 
@@ -77,6 +79,7 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] Hosting-Unterschied Vercel vs. Supabase beschreiben
 - [x] Hinweis: Import ist Metadaten, keine Videoanalyse
 - [x] Projektplan nach größeren Phasen aktualisieren (nur ergänzen, Todo nicht leeren)
+- [x] Cursor-Regel `.cursor/rules/projektplan-todo.mdc` (`alwaysApply`): Plan und Todo vor der Arbeit lesen, danach fortschreiben; `TODO.md` nie löschen; diese Regeldatei nicht neu erzeugen oder überschreiben
 
 ## Originalvideo und Import-Qualität
 

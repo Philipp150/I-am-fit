@@ -19,8 +19,8 @@ Die kostenlosen Pläne (Vercel Hobby, Supabase Free) reichen für den Start.
 
 - **Sammlung** mit hierarchischen Kategorien (Eltern/Kinder) und mehreren Tags pro Übung
 - **Katalog + eigene Übungen**: Bewegung, Atem, Mantras, Achtsamkeit
-- **Erklärung** als Text plus einheitliche Strichfigur; Schritte aneinandergereiht wirken wie ein kurzes Video
-- **Import** von YouTube- oder Instagram-Links: Titel und Beschreibung werden gelesen, eine oder mehrere Übungen vorgeschlagen und als Strichfigur neu gezeichnet
+- **Erklärung** als Text plus einheitliche Gliederpuppe (männlich, mit Gelenken); Schritte aneinandergereiht wirken wie ein kurzes Video
+- **Import** von YouTube- oder Instagram-Links: Titel und Beschreibung werden gelesen, eine oder mehrere Übungen vorgeschlagen und als Gliederpuppe neu gezeichnet
 - **Übungsplan** mit Rhythmus und optionalem Zeitraum; mehrere Pläne, Versand an eine E-Mail (Annehmen in der App)
 - **Beschwerden** mit passenden Übungsvorschlägen
 - **Heute-Ansicht** mit Serie, ohne Schuldgefühl beim Auslassen
@@ -53,7 +53,7 @@ Ohne diese Variablen startet die App trotzdem – dann nur mit lokalem Browser-S
 
 ## Projektplan
 
-Stand, Phasen und offene Arbeit: [PROJEKTPLAN.md](PROJEKTPLAN.md), [TODO.md](TODO.md). In der Todo-Liste werden Punkte nur abgehakt, nicht gelöscht.
+Stand, Phasen und offene Arbeit: [PROJEKTPLAN.md](PROJEKTPLAN.md), [TODO.md](TODO.md). In der Todo-Liste werden Punkte nur abgehakt, nicht gelöscht. Agents lesen beides über die Git-Regel `.cursor/rules/projektplan-todo.mdc`.
 
 ## Entwicklung
 

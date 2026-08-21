@@ -12,8 +12,8 @@ Quellcode: dieses Repository (`schlag-art/philipp150-I-am-fit`, Ursprung [github
 ### Prinzipien
 
 - Sanfte Erinnerung statt Druck: Serie und Verlauf sind Blick zurück, kein Score.
-- Einheitliche Strichfigur statt fremder Videos; Import liefert Metadaten, die Figur zeichnet die App neu.
-- Derselbe Plan auf PC und Handy, sobald Vercel + Supabase laufen.
+- Einheitliche Gliederpuppe (männlich, mit Gelenken) statt fremder Videos; Import liefert Metadaten, die Figur zeichnet die App neu. Originalvideo nur zusätzlich.
+- Derselbe Plan auf PC und Handy, sobald Vercel + Supabase laufen (`plans`, `plan_invites` liegen live im Schema).
 - Ohne Cloud bleibt die App lokal im Browser (IndexedDB) nutzbar.
 
 ## 2. Was die App kann
@@ -24,7 +24,7 @@ Quellcode: dieses Repository (`schlag-art/philipp150-I-am-fit`, Ursprung [github
 | **Sammlung** | Hierarchische Kategorien, Tags, Katalog und eigene Übungen |
 | **Plan** | Mehrere Pläne (eigene und empfangene), Rhythmus, optionaler Zeitraum, aktiver Plan für Heute, Versand per E-Mail |
 | **Beschwerden** | Symptom-Auswahl mit Vorschlägen aus dem Katalog |
-| **Import** | YouTube- oder Instagram-Link → Titel/Beschreibung → eine oder mehrere Übungen als Strichfigur |
+| **Import** | YouTube- oder Instagram-Link → Titel/Beschreibung → Übungen als Gliederpuppe; Originalvideo nur zusätzlich |
 | **Verlauf** | 28-Tage-Raster, letzte Completions, Anzeigename |
 | **Konto** | Optionale E-Mail-Anmeldung über Supabase; ohne Login nur lokaler Speicher |
 
@@ -43,10 +43,10 @@ Vercel   │ Hosting, Import-API (/api/import)
 
 | Schicht | Technik |
 | --- | --- |
-| UI | `src/app/*`, `src/components/*`, Bottom-Nav (Heute, Sammlung, Plan, Beschwerden) |
-| Domain | `src/lib/plan.ts`, `schedule.ts`, `catalog.ts`, `suggestions.ts`, `poses.ts` |
+| UI | `src/app/*`, `src/components/*` (PosePlayer + Gliederpuppe in `StickFigure.tsx`, Originalvideo in `SourceVideo.tsx`), Bottom-Nav |
+| Domain | `src/lib/plan.ts`, `plan-share.ts`, `schedule.ts`, `catalog.ts`, `suggestions.ts`, `poses.ts` |
 | Persistenz | `src/lib/repository.ts` schaltet zwischen Dexie und Supabase |
-| Cloud | `supabase/setup.sql` (Schema, RLS, Seed), `@supabase/ssr` |
+| Cloud | `supabase/setup.sql` (Schema inkl. `plans` / `plan_invites`, RLS, Seed), `@supabase/ssr`; Tabellen existieren im Live-Projekt |
 | Import | `src/app/api/import/route.ts` + `extract-meta.ts` / `import-parse.ts` |
 | PWA | `src/app/manifest.ts`, Raster-Icons 192/512, `public/sw.js` (Offline-Cache für App-Shell und Katalog) |
 | Native Hülle | Capacitor 7 (`capacitor.config.ts`, App-ID `art.schlag.iamfit`); `android/` und `ios/` laden `https://i-am-super-fit.vercel.app`, damit Import-API und Auth erreichbar bleiben. |
@@ -64,7 +64,7 @@ Pläne können von einer anderen Person (z. B. Physiotherapie) zusammengestellt 
 
 Ohne Vercel nur lokal mit Node. Ohne Supabase nur dieser eine Browser.
 
-Setup-Kurzfassung: `supabase/setup.sql` im SQL-Editor ausführen; Site-URL und Redirect `/auth/callback` setzen; in Vercel `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`.
+Setup-Kurzfassung: `supabase/setup.sql` im SQL-Editor ausführen; Site-URL und Redirect `/auth/callback` setzen; in Vercel `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`. Keine Secrets ins Repo oder in Cursor-Regeln. Das Live-Projekt hat `plans` und `plan_invites`; nach Schema-Änderungen die Datei erneut ausführen.
 
 Entwicklung:
 
@@ -113,7 +113,12 @@ Neue Arbeit wird **unten in TODO.md angehängt**. Fertiges wird dort nur abgehak
 | [README.md](README.md) | Nutzung, Hosting, Entwicklung |
 | [PROJEKTPLAN.md](PROJEKTPLAN.md) | Dieses Dokument |
 | [TODO.md](TODO.md) | Arbeitsliste (nur abhaken, nie löschen) |
+| [.cursor/rules/projektplan-todo.mdc](.cursor/rules/projektplan-todo.mdc) | Cursor-Regel (`alwaysApply`): vor der Arbeit Plan und Todo lesen, danach fortschreiben; Todo und diese Regeldatei nicht löschen/überschreiben. Optional dieselbe Kurzregel in Cursor Settings → User Rules als Backup. |
 
-## 8. Nachtrag: Originalvideo als Zusatz
+## 8. Nachtrag: Gliederpuppe
+
+Die Practice- und Katalogansicht zeigt keine Strichmännchen-Linien mehr, sondern eine gegliederte männliche Figur (Torso, Becken, versetzte Schultern/Hüften, sichtbare Gelenke). Die Komponente heißt weiter `StickFigure`; die Posen kommen aus `poses.ts`.
+
+## 9. Nachtrag: Originalvideo als Zusatz
 
 Die Anleitung (Schritte + App-Figur) bleibt die Hauptansicht. Import liest öffentlich verfügbare Titel, Beschreibung und YouTube-Untertitel, wenn sie ohne API-Key erreichbar sind – keine Frame-Analyse. YouTube kann nach „Video ansehen“ über youtube-nocookie eingebettet werden (Click-to-Play). Instagram wird verlinkt („Auf Instagram öffnen“) plus Thumbnail aus og-Daten, wenn vorhanden. Andere Links öffnen im Browser.
