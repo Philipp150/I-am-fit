@@ -4,9 +4,11 @@ import {
   isYoutubeTimedTextUrl,
   parseTimedTextList,
   parseTimedTextXml,
+  parseTimedTextCues,
   pickCaptionTrack,
   type CaptionTrack,
   type ExtractedMeta,
+  type TimedCaptionCue,
 } from "@/lib/extract-meta";
 import {
   composeImportMeta,
@@ -74,11 +76,11 @@ export async function POST(request: Request) {
   }
 
   const videoId = provider === "youtube" ? parseYoutubeVideoId(url) : null;
-  const captions = videoId
+  const captionResult = videoId
     ? await readYoutubeCaptions(videoId, page?.captionTracks ?? [])
-    : "";
+    : { text: "", cues: [] as TimedCaptionCue[] };
 
-  if (!fetchedSomething && !oembed?.title && !page?.title && !page?.description && !captions) {
+  if (!fetchedSomething && !oembed?.title && !page?.title && !page?.description && !captionResult.text) {
     return NextResponse.json({ error: IMPORT_MESSAGES.fetch_failed, code: "fetch_failed" }, { status: 422 });
   }
 
@@ -87,7 +89,8 @@ export async function POST(request: Request) {
     provider,
     oembed,
     page,
-    captions,
+    captions: captionResult.text,
+    captionCues: captionResult.cues,
   });
 
   if (!hasUsableMeta(meta)) {
@@ -103,30 +106,41 @@ export async function POST(request: Request) {
   });
 }
 
-async function readYoutubeCaptions(videoId: string, tracks: CaptionTrack[]): Promise<string> {
+function captionsFromXml(xml: string | null): { text: string; cues: TimedCaptionCue[] } {
+  if (!xml) return { text: "", cues: [] };
+  const cues = parseTimedTextCues(xml).slice(0, 400);
+  const text = parseTimedTextXml(xml).slice(0, CAPTION_LIMIT);
+  return { text, cues };
+}
+
+async function readYoutubeCaptions(
+  videoId: string,
+  tracks: CaptionTrack[],
+): Promise<{ text: string; cues: TimedCaptionCue[] }> {
+  const empty = { text: "", cues: [] as TimedCaptionCue[] };
   try {
     const fromPage = pickCaptionTrack(tracks);
     if (fromPage && isYoutubeTimedTextUrl(fromPage.baseUrl)) {
       const xml = await fetchText(fromPage.baseUrl);
-      const parsed = xml ? parseTimedTextXml(xml) : "";
-      if (parsed) return parsed.slice(0, CAPTION_LIMIT);
+      const parsed = captionsFromXml(xml);
+      if (parsed.text) return parsed;
     }
 
     const listXml = await fetchText(youtubeTimedTextListUrl(videoId));
-    if (!listXml) return "";
+    if (!listXml) return empty;
     const listed = parseTimedTextList(listXml);
     const preferred =
       listed.find((track) => track.languageCode.toLowerCase().startsWith("de")) ??
       listed.find((track) => track.isDefault) ??
       listed.find((track) => track.languageCode.toLowerCase().startsWith("en")) ??
       listed[0];
-    if (!preferred) return "";
+    if (!preferred) return empty;
     const trackUrl = youtubeTimedTextTrackUrl(videoId, preferred.languageCode, preferred.name || undefined);
-    if (!isYoutubeTimedTextUrl(trackUrl)) return "";
+    if (!isYoutubeTimedTextUrl(trackUrl)) return empty;
     const xml = await fetchText(trackUrl);
-    return xml ? parseTimedTextXml(xml).slice(0, CAPTION_LIMIT) : "";
+    return captionsFromXml(xml);
   } catch {
-    return "";
+    return empty;
   }
 }
 

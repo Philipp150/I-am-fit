@@ -20,7 +20,7 @@ Die kostenlosen Pläne (Vercel Hobby, Supabase Free) reichen für den Start.
 - **Sammlung** mit hierarchischen Kategorien (Eltern/Kinder) und mehreren Tags pro Übung
 - **Katalog + eigene Übungen**: Bewegung, Atem, Mantras, Achtsamkeit
 - **Erklärung** als Text plus einheitliche Gliederpuppe (männlich, mit Gelenken); Schritte aneinandergereiht wirken wie ein kurzes Video
-- **Import** von YouTube- oder Instagram-Links: Vorschlag als bearbeitbare Felder und Figur; gleicher Link wird erkannt; eigene Übung auch ohne Link. Eine **Bewegungsspur** entsteht nur aus einer hochgeladenen Videodatei (oder einer öffentlichen mp4/webm-Datei), nicht aus der YouTube-Einbettung.
+- **Import** von YouTube- oder Instagram-Links: Vorschlag als bearbeitbare Felder und Figur; gleicher Link wird erkannt; eigene Übung auch ohne Link. Eine **Bewegungsspur** und **Text im Bild** entstehen nur aus einer hochgeladenen Videodatei (oder einer öffentlichen mp4/webm-Datei), nicht aus der YouTube-Einbettung. Untertitel/Metadaten bleiben.
 - **Übungsplan** mit Rhythmus und optionalem Zeitraum; mehrere Pläne, Versand an eine E-Mail (Annehmen in der App)
 - **Beschwerden** mit passenden Übungsvorschlägen
 - **Heute-Ansicht** mit Serie, ohne Schuldgefühl beim Auslassen

@@ -1,4 +1,4 @@
-import type { ExtractedMeta } from "./extract-meta";
+import type { ExtractedMeta, TimedCaptionCue } from "./extract-meta";
 import { parseYoutubeVideoId, youtubeThumbnailUrl } from "./source-video";
 import type { DraftExercise, ExerciseKind, PoseId, SuggestedRhythm } from "./types";
 
@@ -12,6 +12,7 @@ export type ImportMeta = {
   author?: string;
   thumbnailUrl?: string;
   captions?: string;
+  captionCues?: TimedCaptionCue[];
 };
 
 export type OEmbedMeta = {
@@ -279,6 +280,7 @@ export function composeImportMeta(input: {
   oembed?: OEmbedMeta | null;
   page?: ExtractedMeta | null;
   captions?: string;
+  captionCues?: TimedCaptionCue[];
 }): ImportMeta {
   const title = (input.oembed?.title || input.page?.title || "").trim();
   const description = (input.page?.description || "").trim();
@@ -288,6 +290,7 @@ export function composeImportMeta(input: {
     (input.oembed?.thumbnail_url || input.page?.thumbnailUrl || (videoId ? youtubeThumbnailUrl(videoId) : "")).trim() ||
     undefined;
   const captions = input.captions?.trim() || undefined;
+  const captionCues = input.captionCues && input.captionCues.length > 0 ? input.captionCues : undefined;
   return {
     url: input.url,
     provider: input.provider,
@@ -296,6 +299,7 @@ export function composeImportMeta(input: {
     author,
     thumbnailUrl,
     captions,
+    captionCues,
   };
 }
 

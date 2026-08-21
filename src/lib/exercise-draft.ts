@@ -60,11 +60,16 @@ export function canSaveDraft(draft: DraftExercise): boolean {
 
 function sanitizeDraft(draft: DraftExercise): DraftExercise {
   const title = draft.title.trim();
-  const steps = (draft.steps.length > 0 ? draft.steps : [emptyStep()]).map((step) => ({
-    ...step,
-    text: step.text.trim() || title,
-    durationSec: Number.isFinite(step.durationSec) ? Math.max(2, step.durationSec) : 8,
-  }));
+  const steps = (draft.steps.length > 0 ? draft.steps : [emptyStep()]).map((step) => {
+    const startSec =
+      typeof step.startSec === "number" && Number.isFinite(step.startSec) ? Math.max(0, step.startSec) : undefined;
+    return {
+      ...step,
+      text: step.text.trim() || title,
+      durationSec: Number.isFinite(step.durationSec) ? Math.max(2, step.durationSec) : 8,
+      ...(startSec !== undefined ? { startSec: Math.round(startSec * 10) / 10 } : {}),
+    };
+  });
   const suggestedRhythm: SuggestedRhythm = {
     ...draft.suggestedRhythm,
     note: draft.suggestedRhythm.note.trim() || DEFAULT_NOTE,

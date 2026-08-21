@@ -31,6 +31,7 @@ export default function NewExercisePage() {
         categoryIds: draft.categoryIds,
         complaintIds: draft.complaintIds,
         steps: draft.steps,
+        poseTrack: draft.poseTrack,
         defaultDurationSec: draft.defaultDurationSec,
         note: draft.suggestedRhythm.note,
       }),
@@ -43,7 +44,8 @@ export default function NewExercisePage() {
       <h2 className="font-display text-3xl text-forest-dark">Eigene Übung</h2>
       <p className="text-sm text-ink/80">
         Ohne Link: Bewegung, Mantra, Atem – alles darf eine Übung sein. Erkläre sie mit Text und der einheitlichen Figur.
-        Optional kannst du eine Videodatei hochladen: einmal erkennen, danach spielt die Figur die Spur.
+        Optional kannst du eine Videodatei hochladen: einmal erkennen (Bewegung und Text im Bild), danach spielt die
+        Figur die Spur.
       </p>
       <ExerciseEditor value={draft} onChange={setDraft} categories={categories} complaints={complaints} />
       <PrimaryButton className="w-full" disabled={!canSaveDraft(draft) || saving} onClick={save}>

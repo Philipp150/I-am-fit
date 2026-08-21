@@ -73,11 +73,34 @@ export function pickCaptionTrack(tracks: CaptionTrack[]): CaptionTrack | null {
   return scored[0] ?? null;
 }
 
+export type TimedCaptionCue = {
+  startSec: number;
+  durationSec: number;
+  text: string;
+};
+
+export function parseTimedTextCues(xml: string): TimedCaptionCue[] {
+  const cues: TimedCaptionCue[] = [];
+  for (const match of xml.matchAll(/<text\b([^>]*)>([\s\S]*?)<\/text>/gi)) {
+    const text = decode(stripTags(match[2])).replace(/\s+/g, " ").trim();
+    if (!text) continue;
+    const start = Number(attr(match[1], "start") ?? "0");
+    const dur = Number(attr(match[1], "dur") ?? "0");
+    cues.push({
+      startSec: Number.isFinite(start) ? start : 0,
+      durationSec: Number.isFinite(dur) ? dur : 0,
+      text,
+    });
+  }
+  return cues;
+}
+
 export function parseTimedTextXml(xml: string): string {
-  const parts = [...xml.matchAll(/<text\b[^>]*>([\s\S]*?)<\/text>/gi)].map((match) =>
-    decode(stripTags(match[1])).replace(/\s+/g, " ").trim(),
-  );
-  return parts.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+  return parseTimedTextCues(xml)
+    .map((cue) => cue.text)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export type TimedTextListTrack = {

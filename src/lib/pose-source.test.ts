@@ -17,6 +17,8 @@ describe("pixel sources for pose analysis", () => {
     });
     expect(pixelNotice(pixelAvailabilityForUrl("https://youtu.be/dQw4w9WgXcQ"))).toBe(POSE_COPY.youtube);
     expect(pixelNotice(pixelAvailabilityForUrl("https://youtu.be/dQw4w9WgXcQ"))).toContain("nicht analysiert");
+    expect(POSE_COPY.youtube).toContain("eingeblendeter Text");
+    expect(POSE_COPY.noFile).toContain("eingeblendeter Text");
   });
 
   it("accepts a public file URL and otherwise asks for an upload", () => {

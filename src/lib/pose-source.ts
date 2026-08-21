@@ -2,14 +2,17 @@ import { parseInstagramShortcode, parseYoutubeVideoId } from "./source-video";
 
 export const POSE_COPY = {
   progress: "Bewegung wird erkannt …",
+  ocrProgress: "Text im Video wird gelesen …",
+  ocrApplied:
+    "Text im Video wurde gelesen und in Titel, Kurztext und Schritte übernommen. Du kannst alles weiter anpassen.",
   noPerson: "Keine Person im Video gefunden. Nimm einen Clip, in dem der Körper gut zu sehen ist.",
   loadFailed: "Die Bewegungserkennung konnte nicht geladen werden. Prüfe die Verbindung und versuche es erneut.",
   youtube:
-    "YouTube liefert in der App keine Pixel – die Einbettung wird nicht analysiert. Metadaten und Schritte bleiben. Lade die Datei oder einen kurzen Clip hoch, damit die Figur der Bewegung folgt.",
+    "YouTube liefert in der App keine Pixel – die Einbettung wird nicht analysiert (weder Bewegung noch eingeblendeter Text). Metadaten und Untertitel bleiben. Lade die Datei oder einen kurzen Clip hoch, damit die Figur der Bewegung folgt und Text im Bild gelesen werden kann.",
   instagram:
-    "Instagram liefert in der App keine Pixel. Lade die Datei oder einen kurzen Clip hoch, damit die Figur der Bewegung folgt.",
+    "Instagram liefert in der App keine Pixel (weder Bewegung noch eingeblendeter Text). Lade die Datei oder einen kurzen Clip hoch, damit die Figur der Bewegung folgt und Text im Bild gelesen werden kann.",
   noFile:
-    "Ohne Videodatei kann die Bewegung nicht erkannt werden. Du kannst die Figur über Schritte steuern oder eine Datei hochladen.",
+    "Ohne Videodatei können Bewegung und eingeblendeter Text nicht erkannt werden. Du kannst die Figur über Schritte steuern oder eine Datei hochladen.",
   uploadLabel: "Videodatei hochladen",
   replace: "Neu erkennen (ersetzt die Spur)",
   remove: "Bewegungsspur entfernen",

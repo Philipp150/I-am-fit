@@ -16,6 +16,7 @@ describe("import and custom-exercise UI", () => {
     expect(page).toContain("Anpassungen speichern");
     expect(page).toContain("liefern keine");
     expect(page).toContain("nicht analysiert");
+    expect(page).toContain("eingeblendeter Text");
     expect(page).not.toContain("ExerciseCard");
     expect(page).not.toContain("yt-dlp");
   });

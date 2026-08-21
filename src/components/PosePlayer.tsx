@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pause, Play, RotateCcw, SkipBack, SkipForward } from "lucide-react";
-import { captionAtTime, jumpTrackTime, nextStepIndex, playerMode, poseForSteps } from "@/lib/player";
+import { captionAtTime, formatStepClock, jumpTrackTime, nextStepIndex, playerMode, poseForSteps } from "@/lib/player";
 import { hasPlayableTrack, sampleTrackPose } from "@/lib/pose-track";
 import type { PoseTrack } from "@/lib/pose-track";
 import type { ExerciseStep } from "@/lib/types";
@@ -132,9 +132,14 @@ export function PosePlayer({
     setClock((value) => value + 1);
   }
 
+  const stampedStart = safeSteps[caption.index]?.startSec;
+  const clockHint =
+    mode === "track" && typeof stampedStart === "number" && Number.isFinite(stampedStart)
+      ? ` · ab ${formatStepClock(stampedStart)}`
+      : "";
   const stepLabel =
     mode === "track"
-      ? `Bewegungsspur · Schritt ${caption.index + 1} von ${safeSteps.length}`
+      ? `Bewegungsspur · Schritt ${caption.index + 1} von ${safeSteps.length}${clockHint}`
       : `Schritt ${index + 1} von ${safeSteps.length}`;
 
   return (

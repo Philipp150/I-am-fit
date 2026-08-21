@@ -80,4 +80,16 @@ describe("supabase mappers", () => {
     expect(exerciseFromRow(row).poseTrack).toEqual(poseTrack);
     expect(exerciseFromRow({ ...row, pose_track: { version: 9 } }).poseTrack).toBeUndefined();
   });
+
+  it("round-trips step start times on the steps jsonb", () => {
+    const withStarts: Exercise = {
+      ...sample,
+      steps: [
+        { pose: "stand", text: "Stehen.", durationSec: 8, startSec: 0 },
+        { pose: "fold", text: "Beugen.", durationSec: 10, startSec: 14.5 },
+      ],
+    };
+    const row = exerciseToRow(withStarts, "user-1");
+    expect(exerciseFromRow(row).steps[1].startSec).toBe(14.5);
+  });
 });

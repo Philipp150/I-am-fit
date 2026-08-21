@@ -47,7 +47,7 @@ Vercel   │ Hosting, Import-API (/api/import)
 | Domain | `src/lib/plan.ts`, `plan-share.ts`, `schedule.ts`, `catalog.ts`, `suggestions.ts`, `poses.ts`, `pose-track.ts` |
 | Persistenz | `src/lib/repository.ts` schaltet zwischen Dexie und Supabase |
 | Cloud | `supabase/setup.sql` (Schema inkl. `plans` / `plan_invites` / `exercises.pose_track`, RLS, Seed), `@supabase/ssr`; Tabellen existieren im Live-Projekt |
-| Import | `src/app/api/import/route.ts` + `extract-meta.ts` / `import-parse.ts`; Client-Analyse mit MediaPipe Pose (WASM) nur wenn Pixel da sind (Upload oder öffentliche Videodatei) |
+| Import | `src/app/api/import/route.ts` + `extract-meta.ts` / `import-parse.ts`; Client-Analyse mit MediaPipe Pose (WASM) und Tesseract.js-OCR nur wenn Pixel da sind (Upload oder öffentliche Videodatei) |
 | PWA | `src/app/manifest.ts`, Raster-Icons 192/512, `public/sw.js` (Offline-Cache für App-Shell, Katalogseiten, Pose-JS; YouTube/Instagram bewusst **nicht**) |
 | Native Hülle | Capacitor 7 (`capacitor.config.ts`, App-ID `art.schlag.iamfit`); `android/` und `ios/` laden `https://i-am-super-fit.vercel.app`, damit Import-API und Auth erreichbar bleiben. |
 
@@ -100,7 +100,7 @@ Neue Arbeit wird **unten in TODO.md angehängt**. Fertiges wird dort nur abgehak
 
 ## 6. Risiken und Grenzen
 
-- YouTube/Instagram liefern Metadaten, keine Pixel in der iframe-Einbettung. Es gibt keinen YouTube-Downloader. Ohne hochgeladene Datei bleibt der PoseId-Fallback; die App sagt das klar. Vorschläge vor dem Speichern prüfen und anpassen (Titel, Schritte, Figur). Derselbe Link öffnet den vorhandenen Eintrag statt einer stillen Kopie. Eigene Übungen gehen auch ohne Link.
+- YouTube/Instagram liefern Metadaten, keine Pixel in der iframe-Einbettung. Es gibt keinen YouTube-Downloader. Ohne hochgeladene Datei bleibt der PoseId-Fallback; eingeblendeter Text wird nicht gelesen. Die App sagt das klar. Vorschläge vor dem Speichern prüfen und anpassen (Titel, Schritte, Figur). Derselbe Link öffnet den vorhandenen Eintrag statt einer stillen Kopie. Eigene Übungen gehen auch ohne Link.
 - Capacitor `webDir` ist `out` und nur Fallback; Store-Builds laden die gehostete Next.js-App (`server.url`), sonst fehlen API-Routen.
 - Erinnerungen brauchen eine Notification-Erlaubnis und eine geöffnete oder installierte App; ohne Push-Server gibt es keine Zustellung bei komplett geschlossenem Browser.
 - Cloud und lokaler Dexie-Stand bleiben getrennte Speicher; die Übernahme ins Konto liegt unter Verlauf.
@@ -151,4 +151,8 @@ Beim Import oder „Selbst anlegen“ kann ein **Videoclip einmal** im Browser a
 
 **Pixelquellen:** Hochgeladene Datei ist der zuverlässige Weg. YouTube/Instagram-iframes haben keine Pixel – kein yt-dlp, keine stille Analyse der Einbettung. Nur wenn schon eine öffentliche Videodatei-URL (mp4/webm/mov) vorliegt, darf der Client sie lesen. Sonst Hinweis: Datei oder kurzen Clip hochladen.
 
-Analyse-UX: „Bewegung wird erkannt …“; Fehler, wenn keine Person gefunden wird. Playback-Hinweis „Video braucht Internet“ bleibt für Originalclips.
+Analyse-UX: „Bewegung wird erkannt …“ und „Text im Video wird gelesen …“; Fehler, wenn keine Person gefunden wird. Fehlender Overlay-Text ist kein Fehler. Playback-Hinweis „Video braucht Internet“ bleibt für Originalclips.
+
+## 14. Nachtrag: Text im Video (OCR + Untertitel)
+
+Beim Datei-Upload läuft OCR (Tesseract.js, WASM) im selben Durchgang wie die Bewegungsspur, etwas sparsamer als die Pose-Abtastung. Gelesen werden Einblendungen (Titel, „Schritt n“, Übungsnamen, Dauer, links/rechts). Vorhandene YouTube-Untertitel und Beschreibungen werden **dazugemerkt**, nicht verworfen. Klare Schrittgrenzen (Schritt-Marker, nummerierte Listen, neuer Overlay-Titel) teilen `steps[]` und setzen `startSec`, damit PosePlayer den neuen Schritt zur passenden Zeit zeigt. Unklarer Rauschen erzeugt keine Extra-Schritte. Ohne Datei bleiben Captions/Metadaten wie bisher; OCR braucht Pixel – derselbe Hinweis wie bei der Bewegungsspur. Es werden keine Frame-Bilder gespeichert. Der Service Worker cached YouTube weiterhin nicht.

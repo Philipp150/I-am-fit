@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { analyzeHtmlVideo, PoseAnalyzeError } from "@/lib/pose-analyze";
+import { analyzeClip, PoseAnalyzeError } from "@/lib/pose-analyze";
 import { mediaPipeDetector } from "@/lib/pose-landmarker";
 import {
   acceptVideoFile,
@@ -10,15 +10,35 @@ import {
   POSE_COPY,
 } from "@/lib/pose-source";
 import { hasPlayableTrack, type PoseTrack } from "@/lib/pose-track";
+import { createTesseractReader } from "@/lib/video-ocr";
+import {
+  motionFromTrack,
+  pauseResumeTimes,
+  suggestFromVideoText,
+  type TimedCaptionCue,
+  type VideoTextSuggestion,
+} from "@/lib/video-text";
 import { Field } from "./ui";
 
 type Props = {
   value?: PoseTrack | null;
   sourceUrl?: string;
-  onChange: (track: PoseTrack | null) => void;
+  captions?: string;
+  captionCues?: TimedCaptionCue[];
+  existingTitle?: string;
+  existingSummary?: string;
+  onChange: (track: PoseTrack | null, suggestion?: VideoTextSuggestion) => void;
 };
 
-export function PoseTrackCapture({ value, sourceUrl, onChange }: Props) {
+export function PoseTrackCapture({
+  value,
+  sourceUrl,
+  captions,
+  captionCues,
+  existingTitle,
+  existingSummary,
+  onChange,
+}: Props) {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -31,16 +51,31 @@ export function PoseTrackCapture({ value, sourceUrl, onChange }: Props) {
     setBusy(true);
     setError(null);
     setNote(null);
-    setProgress(POSE_COPY.progress);
+    setProgress(`${POSE_COPY.progress} ${POSE_COPY.ocrProgress}`);
+    const reader = await createTesseractReader().catch(() => null);
     try {
-      const track = await analyzeHtmlVideo({
+      const { track, ocrCues } = await analyzeClip({
         video,
         detect: (image, timeSec) => mediaPipeDetector.detect(image, timeSec),
+        readText: reader ? (image, timeSec) => reader.read(image, timeSec) : undefined,
         sourceKind,
         onProgress: (state) => setProgress(`${state.label} ${Math.round(state.ratio * 100)} %`),
       });
-      onChange(track);
-      if (video.duration > 90) setNote(POSE_COPY.truncated);
+      const pauseTimes = pauseResumeTimes(motionFromTrack(track), track.fps);
+      const suggestion = suggestFromVideoText({
+        ocrCues,
+        captions,
+        captionCues,
+        existingTitle,
+        existingSummary,
+        durationSec: track.durationSec,
+        pauseTimes,
+      });
+      onChange(track, suggestion);
+      const notes: string[] = [];
+      if (video.duration > 90) notes.push(POSE_COPY.truncated);
+      if (suggestion.foundText) notes.push(POSE_COPY.ocrApplied);
+      if (notes.length) setNote(notes.join(" "));
     } catch (err) {
       const message =
         err instanceof PoseAnalyzeError
@@ -50,6 +85,7 @@ export function PoseTrackCapture({ value, sourceUrl, onChange }: Props) {
             : POSE_COPY.loadFailed;
       setError(message);
     } finally {
+      await reader?.dispose?.().catch(() => undefined);
       if (revokeUrl) URL.revokeObjectURL(revokeUrl);
       video.removeAttribute("src");
       video.load();
@@ -87,7 +123,8 @@ export function PoseTrackCapture({ value, sourceUrl, onChange }: Props) {
     <div className="space-y-3 rounded-[1.4rem] border border-sand/80 bg-paper/70 p-3">
       <h4 className="font-display text-lg text-forest-dark">Bewegungsspur</h4>
       <p className="text-sm leading-relaxed text-ink/80">
-        Einmal aus einem Clip erkennen, danach spielt die Figur die kompakte Spur. Das Originalvideo bleibt optional und
+        Einmal aus einem Clip erkennen, danach spielt die Figur die kompakte Spur. Eingeblendeter Text (Titel, Schritte,
+        Seite) wird im selben Durchgang gelesen und in die Vorschläge übernommen. Das Originalvideo bleibt optional und
         braucht Internet.
       </p>
       {notice && (
@@ -125,7 +162,7 @@ export function PoseTrackCapture({ value, sourceUrl, onChange }: Props) {
       )}
       {busy && (
         <p className="text-sm text-forest-dark" role="status" aria-live="polite">
-          {progress ?? POSE_COPY.progress}
+          {progress ?? `${POSE_COPY.progress} ${POSE_COPY.ocrProgress}`}
         </p>
       )}
       {note && !busy && (

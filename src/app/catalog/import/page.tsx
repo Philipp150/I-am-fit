@@ -10,11 +10,12 @@ import { useCategories, useComplaints, useExercises } from "@/lib/hooks";
 import { findExercisesBySourceUrl } from "@/lib/source-match";
 import { newId, saveExercise } from "@/lib/repository";
 import type { DraftExercise, Exercise } from "@/lib/types";
+import type { TimedCaptionCue } from "@/lib/video-text";
 
 type ImportResponse = {
   error?: string;
   code?: string;
-  meta?: { title: string; provider: string; url: string; usedCaptions?: boolean };
+  meta?: { title: string; provider: string; url: string; usedCaptions?: boolean; captions?: string; captionCues?: TimedCaptionCue[] };
   drafts?: DraftExercise[];
 };
 
@@ -36,11 +37,15 @@ export default function ImportPage() {
   const [items, setItems] = useState<ImportItem[]>([]);
   const [sourceLabel, setSourceLabel] = useState("");
   const [usedCaptions, setUsedCaptions] = useState(false);
+  const [captions, setCaptions] = useState("");
+  const [captionCues, setCaptionCues] = useState<TimedCaptionCue[]>([]);
   const [duplicate, setDuplicate] = useState(false);
 
   function loadExisting(matches: Exercise[], label: string) {
     setDuplicate(true);
     setUsedCaptions(false);
+    setCaptions("");
+    setCaptionCues([]);
     setSourceLabel(label);
     setItems(
       matches.map((exercise) => ({
@@ -87,6 +92,8 @@ export default function ImportPage() {
       setItems(data.drafts.map((draft) => ({ draft, selected: true })));
       setSourceLabel(data.meta?.title ?? url);
       setUsedCaptions(Boolean(data.meta?.usedCaptions));
+      setCaptions(data.meta?.captions ?? "");
+      setCaptionCues(data.meta?.captionCues ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unbekannter Fehler");
     } finally {
@@ -127,8 +134,8 @@ export default function ImportPage() {
       <p className="text-sm leading-relaxed text-ink/80">
         Füge einen YouTube- oder Instagram-Link ein. Die App liest öffentlich verfügbare Titel, Beschreibungen und
         Untertitel – wenn sie erreichbar sind – und schlägt Übungen vor. YouTube- und Instagram-Einbettungen liefern keine
-        Pixel: sie werden nicht analysiert. Für eine Bewegungsspur lade die Datei oder einen kurzen Clip hoch. Das
-        Originalvideo bleibt nur zusätzlich.
+        Pixel: sie werden nicht analysiert (weder Bewegung noch eingeblendeter Text). Für Bewegungsspur und Text im Bild
+        lade die Datei oder einen kurzen Clip hoch. Das Originalvideo bleibt nur zusätzlich.
       </p>
       <Field label="Link">
         <input
@@ -172,8 +179,8 @@ export default function ImportPage() {
                 {usedCaptions
                   ? "Öffentliche Untertitel wurden mitgelesen, danach zeichnen wir unsere Figur."
                   : "Titel und Beschreibung wurden gelesen. Öffentliche Untertitel lagen nicht vor oder waren nicht erreichbar."}{" "}
-                Felder und Figur sind bearbeitbar, bevor du speicherst. Eine Bewegungsspur entsteht nur aus einer
-                hochgeladenen Datei (oder einer öffentlichen Videodatei), nicht aus der YouTube-Einbettung. Das
+                Felder und Figur sind bearbeitbar, bevor du speicherst. Bewegungsspur und Text im Bild entstehen nur aus
+                einer hochgeladenen Datei (oder einer öffentlichen Videodatei), nicht aus der YouTube-Einbettung. Das
                 Originalvideo kannst du später zusätzlich ansehen.
               </p>
             </>
@@ -203,6 +210,8 @@ export default function ImportPage() {
                   value={item.draft}
                   categories={categories}
                   complaints={complaints}
+                  captions={captions}
+                  captionCues={captionCues}
                   onChange={(draft) =>
                     setItems((current) => current.map((entry, i) => (i === index ? { ...entry, draft } : entry)))
                   }
@@ -218,6 +227,8 @@ export default function ImportPage() {
               onClick={() => {
                 setItems([]);
                 setUsedCaptions(false);
+                setCaptions("");
+                setCaptionCues([]);
                 setDuplicate(false);
               }}
             >

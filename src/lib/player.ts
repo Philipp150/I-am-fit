@@ -23,14 +23,39 @@ export function stepsDurationSec(steps: ExerciseStep[]): number {
 }
 
 export function stepStartTimes(steps: ExerciseStep[], totalDuration: number): number[] {
+  const duration = Math.max(totalDuration, 0.1);
+  const stamped = steps.map((step) =>
+    typeof step.startSec === "number" && Number.isFinite(step.startSec) ? Math.max(0, step.startSec) : null,
+  );
+  if (stamped.some((value) => value !== null)) {
+    let last = 0;
+    return stamped.map((value, index) => {
+      if (value !== null) {
+        last = Math.min(duration, value);
+        return last;
+      }
+      const nextStamped = stamped.findIndex((entry, i) => i > index && entry !== null);
+      const nextTime = nextStamped >= 0 ? Math.min(duration, stamped[nextStamped] as number) : duration;
+      const gap = nextStamped >= 0 ? nextStamped - index + 1 : steps.length - index;
+      last = last + (nextTime - last) / Math.max(1, gap);
+      return last;
+    });
+  }
   const sum = stepsDurationSec(steps);
-  const scale = sum > 0 ? totalDuration / sum : 1;
+  const scale = sum > 0 ? duration / sum : 1;
   let acc = 0;
   return steps.map((step) => {
     const start = acc * scale;
     acc += Math.max(0.2, step.durationSec || 0);
     return start;
   });
+}
+
+export function formatStepClock(timeSec: number): string {
+  const sec = Math.max(0, Math.round(timeSec));
+  const minutes = Math.floor(sec / 60);
+  const rest = sec % 60;
+  return `${minutes}:${rest.toString().padStart(2, "0")}`;
 }
 
 export function captionAtTime(

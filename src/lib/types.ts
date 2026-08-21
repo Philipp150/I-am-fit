@@ -72,6 +72,8 @@ export type ExerciseStep = {
   pose: PoseId;
   text: string;
   durationSec: number;
+  /** Seconds from clip start when this step should appear. Optional; PosePlayer falls back to duration stacking. */
+  startSec?: number;
 };
 
 export type Category = {

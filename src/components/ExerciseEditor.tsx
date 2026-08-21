@@ -6,8 +6,10 @@ import { PoseTrackCapture } from "@/components/PoseTrackCapture";
 import { StickFigure } from "@/components/StickFigure";
 import { Card, Field, fieldClass } from "@/components/ui";
 import { applyPoseOverride, applyStepPatch, emptyStep, patchDraft } from "@/lib/exercise-draft";
+import { formatStepClock } from "@/lib/player";
 import { POSE_IDS, POSE_LABELS } from "@/lib/poses";
 import type { Category, Complaint, DraftExercise, ExerciseKind, PoseId } from "@/lib/types";
+import { applyAnalysisToDraft, type TimedCaptionCue } from "@/lib/video-text";
 
 function toggle(list: string[], id: string): string[] {
   return list.includes(id) ? list.filter((item) => item !== id) : [...list, id];
@@ -19,12 +21,16 @@ export function ExerciseEditor({
   categories,
   complaints,
   showPlayer = true,
+  captions,
+  captionCues,
 }: {
   value: DraftExercise;
   onChange: (next: DraftExercise) => void;
   categories: Category[];
   complaints: Complaint[];
   showPlayer?: boolean;
+  captions?: string;
+  captionCues?: TimedCaptionCue[];
 }) {
   return (
     <div className="space-y-4">
@@ -107,13 +113,18 @@ export function ExerciseEditor({
         <h3 className="font-display text-xl">Figur und Schritte</h3>
         <p className="mb-3 text-sm text-forest-light">
           Jeder Schritt ist Text plus eine Pose. Wenn eine Bewegungsspur aus einem Clip liegt, spielt die Figur sie ab;
-          sonst die gewählten Posen. Du kannst Schritte weiter bearbeiten; neu erkennen ersetzt die Spur.
+          sonst die gewählten Posen. Text im Video (und vorhandene Untertitel) fließt in Titel und Schritte; neu erkennen
+          ersetzt die Spur.
         </p>
         <div className="mb-4">
           <PoseTrackCapture
             value={value.poseTrack}
             sourceUrl={value.source.url}
-            onChange={(poseTrack) => onChange(patchDraft(value, { poseTrack }))}
+            captions={captions}
+            captionCues={captionCues}
+            existingTitle={value.title}
+            existingSummary={value.summary}
+            onChange={(poseTrack, suggestion) => onChange(applyAnalysisToDraft(value, poseTrack, suggestion))}
           />
         </div>
         {showPlayer && (
@@ -168,6 +179,30 @@ export function ExerciseEditor({
                   )
                 }
               />
+              <Field label="Start im Clip (Sekunden, optional)">
+                <input
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  className={fieldClass}
+                  value={step.startSec ?? ""}
+                  placeholder="z. B. 12"
+                  onChange={(event) => {
+                    const raw = event.target.value;
+                    const startSec = raw === "" ? undefined : Number(raw);
+                    onChange(
+                      patchDraft(value, {
+                        steps: applyStepPatch(value.steps, index, {
+                          startSec: startSec !== undefined && Number.isFinite(startSec) ? startSec : undefined,
+                        }),
+                      }),
+                    );
+                  }}
+                />
+              </Field>
+              {typeof step.startSec === "number" && Number.isFinite(step.startSec) && (
+                <p className="mt-1 text-xs text-forest-light">Ab {formatStepClock(step.startSec)} im Clip.</p>
+              )}
               <Field label="Sekunden in der Anleitung">
                 <input
                   type="number"

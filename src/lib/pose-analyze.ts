@@ -8,6 +8,8 @@ import {
   type PoseTrack,
   type PoseTrackSourceKind,
 } from "./pose-track";
+import { grabVideoFrame, ocrSampleToCue, shouldReadTextAtSample, type FrameTextReader } from "./video-ocr";
+import type { VideoTextCue } from "./video-text";
 
 export type PoseAnalyzeCode = "no-person" | "no-pixels" | "load-failed" | "too-short" | "tainted";
 
@@ -211,18 +213,77 @@ export async function analyzeHtmlVideo(input: {
   onProgress?: (progress: AnalyzeProgress) => void;
   analyzedAt?: string;
 }): Promise<PoseTrack> {
+  const result = await analyzeClip({
+    video: input.video,
+    detect: input.detect,
+    sourceKind: input.sourceKind,
+    fps: input.fps,
+    onProgress: input.onProgress,
+    analyzedAt: input.analyzedAt,
+  });
+  return result.track;
+}
+
+export type ClipAnalysis = {
+  track: PoseTrack;
+  ocrCues: VideoTextCue[];
+};
+
+export async function analyzeClip(input: {
+  video: HTMLVideoElement;
+  detect: PoseDetector["detect"];
+  sourceKind: PoseTrackSourceKind;
+  fps?: number;
+  readText?: FrameTextReader["read"];
+  onProgress?: (progress: AnalyzeProgress) => void;
+  analyzedAt?: string;
+}): Promise<ClipAnalysis> {
   await waitForVideoMetadata(input.video);
   const duration = input.video.duration;
   if (!Number.isFinite(duration) || duration < 0.15) {
     throw new PoseAnalyzeError("too-short", POSE_COPY.tooShort);
   }
-  return analyzeVideoSamples({
-    durationSec: duration,
-    fps: input.fps,
+  const fps = input.fps ?? POSE_TRACK_DEFAULT_FPS;
+  const times = sampleTimes(duration, fps);
+  if (times.length === 0) throw new PoseAnalyzeError("too-short", POSE_COPY.tooShort);
+
+  const detections: Array<PoseLandmark[] | null> = [];
+  const ocrCues: VideoTextCue[] = [];
+  const canvas = typeof document !== "undefined" ? document.createElement("canvas") : undefined;
+  const progressLabel = input.readText
+    ? `${POSE_COPY.progress} ${POSE_COPY.ocrProgress}`
+    : POSE_COPY.progress;
+
+  for (let i = 0; i < times.length; i++) {
+    const timeSec = times[i];
+    input.onProgress?.({
+      ratio: i / times.length,
+      label: progressLabel,
+    });
+    await seekVideo(input.video, timeSec);
+    try {
+      detections.push((await input.detect(input.video, timeSec)) ?? null);
+    } catch {
+      detections.push(null);
+    }
+    if (input.readText && shouldReadTextAtSample(i, times.length)) {
+      try {
+        const frame = canvas ? grabVideoFrame(input.video, canvas) : input.video;
+        const raw = frame ? await input.readText(frame, timeSec) : "";
+        const cue = ocrSampleToCue(timeSec, raw);
+        if (cue) ocrCues.push(cue);
+      } catch {
+        // OCR is optional; pose continues.
+      }
+    }
+  }
+  input.onProgress?.({ ratio: 1, label: progressLabel });
+  const track = buildPoseTrackFromDetections({
+    durationSec: Math.min(duration, POSE_TRACK_MAX_DURATION_SEC),
+    fps,
+    detections,
     sourceKind: input.sourceKind,
-    detect: async (_image, timeSec) => input.detect(input.video, timeSec),
-    seek: (timeSec) => seekVideo(input.video, timeSec),
-    onProgress: input.onProgress,
     analyzedAt: input.analyzedAt,
   });
+  return { track, ocrCues };
 }

@@ -136,3 +136,11 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] PosePlayer: Spur wenn vorhanden, sonst PoseIds; Schritte weiter editierbar; Neu-Erkennen ersetzt die Spur
 - [x] Tests für JSON-Form, Track-Playback, PoseId-Fallback, Upload-Pfad; Lint und Production-Build
 - [x] Live-Supabase: Spalte `exercises.pose_track` (jsonb) existiert (GET rest/v1/exercises?select=id,pose_track HTTP 200 mit `pose_track` im Payload; keine Secrets im Repo)
+
+## Text im Video (OCR und Schrittzeiten)
+
+- [x] Beim Datei-Import OCR auf Abtastframes (Tesseract.js WASM, gleicher Durchgang wie Pose-Track, etwas sparsamer)
+- [x] Vorhandene Captions/Metadaten mit OCR mergen, nicht verwerfen; Titel/Kurztext/Schritte daraus vorschlagen (weiter bearbeitbar)
+- [x] Klare Schrittgrenzen mit `startSec` stempeln; PosePlayer zeigt den Schritt zur Clip-Zeit; kein Erfinden aus OCR-Rauschen
+- [x] YouTube ohne Datei: Captions wie bisher, OCR braucht Pixel (gleicher Hinweis wie Bewegungsspur); Import schlägt ohne Text nicht fehl
+- [x] Tests für OCR→Schritte, Caption-Merge, Startzeiten, Fallback ohne Text; Lint und Production-Build

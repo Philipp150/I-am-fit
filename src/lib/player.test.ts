@@ -43,4 +43,16 @@ describe("practice player", () => {
     expect(captionAtTime(steps, 0, 2).text).toBe("Stehen.");
     expect(captionAtTime(steps, 1.2, 2).text).toBe("Beugen.");
   });
+
+  it("uses stamped startSec so a new step appears at the clip time", () => {
+    const stamped = [
+      { pose: "stand" as const, text: "Stehen.", durationSec: 8, startSec: 0 },
+      { pose: "fold" as const, text: "Beugen.", durationSec: 8, startSec: 12 },
+      { pose: "sit" as const, text: "Sitzen.", durationSec: 8, startSec: 30 },
+    ];
+    expect(captionAtTime(stamped, 0, 40).index).toBe(0);
+    expect(captionAtTime(stamped, 11.9, 40).index).toBe(0);
+    expect(captionAtTime(stamped, 12, 40).index).toBe(1);
+    expect(captionAtTime(stamped, 30, 40).text).toBe("Sitzen.");
+  });
 });

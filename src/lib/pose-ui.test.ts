@@ -26,7 +26,11 @@ describe("pose track UI copy and player wiring", () => {
     expect(capture).toContain("pixelAvailabilityForUrl");
     expect(capture).not.toContain("yt-dlp");
     expect(POSE_COPY.progress).toBe("Bewegung wird erkannt …");
+    expect(POSE_COPY.ocrProgress).toBe("Text im Video wird gelesen …");
     expect(POSE_COPY.noPerson).toContain("Keine Person");
+    expect(capture).toContain("analyzeClip");
+    expect(capture).toContain("createTesseractReader");
+    expect(capture).toContain("POSE_COPY.ocrProgress");
   });
 
   it("keeps YouTube as metadata-only in import copy", () => {

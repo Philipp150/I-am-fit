@@ -3,6 +3,7 @@ import {
   extractMetaFromHtml,
   extractYoutubeCaptionTracks,
   isYoutubeTimedTextUrl,
+  parseTimedTextCues,
   parseTimedTextList,
   parseTimedTextXml,
   pickCaptionTrack,
@@ -74,7 +75,7 @@ describe("YouTube captions from the public page", () => {
     ]);
   });
 
-  it("parses timedtext XML into readable text", () => {
+  it("parses timedtext XML into readable text and cues", () => {
     const xml = `
       <?xml version="1.0" encoding="utf-8" ?>
       <transcript>
@@ -83,6 +84,10 @@ describe("YouTube captions from the public page", () => {
       </transcript>
     `;
     expect(parseTimedTextXml(xml)).toBe("Schultern hoch und fallen lassen");
+    expect(parseTimedTextCues(xml)).toEqual([
+      { startSec: 0.5, durationSec: 2, text: "Schultern" },
+      { startSec: 2.5, durationSec: 2, text: "hoch und fallen lassen" },
+    ]);
   });
 
   it("parses the public timedtext list", () => {
