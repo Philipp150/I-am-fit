@@ -85,6 +85,7 @@ export type Category = {
   isSystem: boolean;
 };
 
+/** Theme, goal or body region. Stored as `complaints` in Dexie/SQL. */
 export type Complaint = {
   id: string;
   name: string;

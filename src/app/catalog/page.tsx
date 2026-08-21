@@ -4,16 +4,21 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { CategoryChips } from "@/components/CategoryPicker";
 import { ExerciseCard } from "@/components/ExerciseCard";
+import { ThemeChips } from "@/components/ThemeChips";
 import { fieldClass } from "@/components/ui";
 import { matchesCategoryFilter } from "@/lib/categories";
-import { useCategories, useExercises } from "@/lib/hooks";
+import { useCategories, useComplaints, useExercises } from "@/lib/hooks";
+import { orderedThemes } from "@/lib/onboarding";
 
 export default function CatalogPage() {
   const exercises = useExercises();
   const categories = useCategories();
+  const complaints = useComplaints();
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [themeId, setThemeId] = useState<string | null>(null);
   const [origin, setOrigin] = useState<"all" | "catalog" | "mine">("all");
+  const themes = useMemo(() => orderedThemes(complaints), [complaints]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -21,10 +26,11 @@ export default function CatalogPage() {
       if (origin === "catalog" && !exercise.isSystem) return false;
       if (origin === "mine" && exercise.isSystem) return false;
       if (!matchesCategoryFilter(exercise.categoryIds, categoryId, categories)) return false;
+      if (themeId && !exercise.complaintIds.includes(themeId)) return false;
       if (!q) return true;
       return `${exercise.title} ${exercise.summary}`.toLowerCase().includes(q);
     });
-  }, [exercises, query, categoryId, categories, origin]);
+  }, [exercises, query, categoryId, categories, origin, themeId]);
 
   return (
     <div className="space-y-4">
@@ -57,6 +63,17 @@ export default function CatalogPage() {
         ))}
       </div>
       <CategoryChips categories={categories} selected={categoryId} onSelect={setCategoryId} />
+      <div>
+        <p id="thema-filter" className="mb-2 text-xs uppercase tracking-[0.16em] text-forest-light">
+          Thema
+        </p>
+        <ThemeChips
+          labelledBy="thema-filter"
+          items={themes.map((theme) => ({ id: theme.id, label: theme.name }))}
+          selectedIds={themeId ? [themeId] : []}
+          onSelect={(id) => setThemeId((current) => (current === id ? null : id))}
+        />
+      </div>
       <p className="text-sm text-forest-light">{filtered.length} Übungen · auch Mantras und Atem</p>
       <div className="space-y-2">
         {filtered.map((exercise) => (

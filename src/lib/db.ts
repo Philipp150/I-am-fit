@@ -92,8 +92,7 @@ export async function ensureCatalogSeeded(): Promise<void> {
       await database.complaints.bulkAdd(COMPLAINTS);
     } else {
       for (const complaint of COMPLAINTS) {
-        const existing = await database.complaints.get(complaint.id);
-        if (!existing) await database.complaints.add(complaint);
+        await database.complaints.put(complaint);
       }
     }
 

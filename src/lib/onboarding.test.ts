@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { CATALOG_EXERCISES } from "./catalog";
 import {
+  FIRST_RUN_DURATION_SEC,
   ONBOARDING_DISMISS_KEY,
   ONBOARDING_REMINDER_PENDING_KEY,
-  QUICK_PATHS,
+  ONBOARDING_THEMES,
   enabledPlanItems,
   onboardingDismissedFrom,
-  onboardingTotalSec,
+  pickFirstRunExercise,
   pickOnboardingExercises,
   reminderAffordancePendingFrom,
   seedOnboardingPlan,
@@ -77,33 +78,16 @@ describe("onboarding gate (first-run vs returning)", () => {
   });
 });
 
-describe("quick path Nacken, 5 Minuten, Büro", () => {
-  const office = QUICK_PATHS.find((path) => path.id === "office-neck-5");
-  if (!office) throw new Error("missing office path");
-
-  it("is labeled in German and uses the neck complaint from the catalog", () => {
-    expect(office.label).toBe("Nacken, 5 Minuten, Büro");
-    expect(office.complaintIds).toEqual(["comp-neck"]);
-    expect(office.maxTotalSec).toBe(300);
+describe("first-run themes", () => {
+  it("offers German chips for region, goal and topic including Bauch", () => {
+    expect(ONBOARDING_THEMES.map((theme) => theme.label)).toEqual(["Nacken", "Rücken", "Bauch", "Beweglichkeit", "Büro"]);
+    expect(ONBOARDING_THEMES.map((theme) => theme.label).join(" ")).not.toMatch(/beschwerde/i);
   });
 
-  it("picks a short, doable desk set that fits in five minutes", () => {
-    const picked = pickOnboardingExercises({
-      complaintIds: office.complaintIds,
-      exercises: CATALOG_EXERCISES,
-      maxTotalSec: office.maxTotalSec,
-      maxCount: office.maxCount,
-      preferCategoryIds: office.preferCategoryIds,
-    });
-    expect(picked.length).toBeGreaterThan(0);
-    expect(picked.length).toBeLessThanOrEqual(3);
-    expect(onboardingTotalSec(picked)).toBeLessThanOrEqual(300);
-    expect(picked.every((exercise) => exercise.complaintIds.includes("comp-neck"))).toBe(true);
-    expect(picked.some((exercise) => exercise.categoryIds.includes("cat-pause"))).toBe(true);
-    const ids = picked.map((exercise) => exercise.id);
-    expect(ids.some((id) => ["ex-desk-break", "ex-neck-circles", "ex-jaw-release", "ex-shoulder-rolls"].includes(id))).toBe(
-      true,
-    );
+  it("maps Bauch to a 60-second core starter", () => {
+    const exercise = pickFirstRunExercise("comp-belly", CATALOG_EXERCISES);
+    expect(exercise?.id).toBe("ex-belly-wake");
+    expect(FIRST_RUN_DURATION_SEC).toBe(60);
   });
 });
 
@@ -149,6 +133,7 @@ describe("plan seed", () => {
     expect(addToPlan).toHaveBeenCalledTimes(2);
     const first = addToPlan.mock.calls[0][1];
     expect(first?.rhythm).toEqual({ kind: "daily", startDate: "2026-08-22" });
+    expect(first?.durationSec).toBe(60);
     expect(first?.keepUntil).toBeNull();
     expect(first?.planId).toBe("plan-self");
     expect(

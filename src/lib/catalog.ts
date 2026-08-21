@@ -22,14 +22,17 @@ export const CATEGORIES: Category[] = [
 ];
 
 export const COMPLAINTS: Complaint[] = [
-  { id: "comp-neck", name: "Nackensteifheit", summary: "Verspannter Nacken, Kopf fühlt sich schwer an.", hint: "Kleine Bewegungen, oft, statt einmal hart zu dehnen." },
-  { id: "comp-shoulders", name: "Hängende Schultern", summary: "Schultern nach vorn, Brustkorb eng.", hint: "Öffnen und absenken, nicht nur nach hinten ziehen." },
-  { id: "comp-back", name: "Rückenschmerzen", summary: "Untere oder mittlere Wirbelsäule protestiert.", hint: "Wechsel aus Beugen und Strecken, nie in den Schmerz hinein." },
-  { id: "comp-hips", name: "Enge Hüfte", summary: "Langes Sitzen, Hüftbeuger kurz.", hint: "Täglich kurz öffnen wirkt oft besser als selten lang." },
-  { id: "comp-knees", name: "Knieunruhe", summary: "Knie fühlen sich unbequem oder instabil an.", hint: "Kraft um das Gelenk, kein übertriebenes Dehnen." },
-  { id: "comp-stress", name: "Stress & Unruhe", summary: "Gedanken rasen, Körper ist an.", hint: "Atem und Mantra zuerst, Bewegung nur so viel, wie der Tag noch trägt." },
-  { id: "comp-sleep", name: "Schwer einschlafen", summary: "Der Tag geht im Kopf weiter.", hint: "Atem und Mantra vor dem Liegen, kein Training spätabends." },
-  { id: "comp-focus", name: "Zerstreutheit", summary: "Du fängst vieles an und verlierst den Faden.", hint: "Kurze Anker, die du wirklich schaffst." },
+  { id: "comp-neck", name: "Nacken", summary: "Bewegung für Hals und Schultergürtel.", hint: "Kleine Bewegungen, oft, statt einmal hart zu dehnen." },
+  { id: "comp-shoulders", name: "Schultern", summary: "Öffnen, absenken, Platz im Brustkorb.", hint: "Öffnen und absenken, nicht nur nach hinten ziehen." },
+  { id: "comp-back", name: "Rücken", summary: "Länge und Wechsel aus Beugen und Strecken.", hint: "Sanft bleiben, nie in den Schmerz hinein." },
+  { id: "comp-hips", name: "Hüfte", summary: "Becken und Hüftbeuger nach langem Sitzen.", hint: "Täglich kurz öffnen wirkt oft besser als selten lang." },
+  { id: "comp-knees", name: "Knie", summary: "Kraft um das Gelenk, ruhige Beinachsen.", hint: "Kraft um das Gelenk, kein übertriebenes Dehnen." },
+  { id: "comp-stress", name: "Ruhe", summary: "Atem und Anker, wenn der Tag zu laut ist.", hint: "Atem und Mantra zuerst, Bewegung nur so viel, wie der Tag noch trägt." },
+  { id: "comp-sleep", name: "Schlaf", summary: "Runterkommen, bevor der Tag im Kopf weitergeht.", hint: "Atem und Mantra vor dem Liegen, kein Training spätabends." },
+  { id: "comp-focus", name: "Fokus", summary: "Kurze Anker, die den Faden wiederfinden.", hint: "Kurze Anker, die du wirklich schaffst." },
+  { id: "comp-belly", name: "Bauch", summary: "Mitte anschalten – Kraft, nicht Diagnose.", hint: "Kurze Reize, Atem behalten, Form vor Länge." },
+  { id: "comp-mobility", name: "Beweglichkeit", summary: "Sanftes Öffnen und Fließen im Alltag.", hint: "Oft und klein schlägt selten und hart." },
+  { id: "comp-office", name: "Büro", summary: "Zwischendurch am Schreibtisch: Nacken, Hände, Blick.", hint: "Aufstehen zählt. Zwei Minuten reichen." },
 ];
 
 function steps(
@@ -258,7 +261,7 @@ export const CATALOG_EXERCISES: Exercise[] = [
     summary: "Mitte anschalten, ohne den Atem anzuhalten.",
     kind: "movement",
     categoryIds: ["cat-body", "cat-strength", "cat-posture"],
-    complaintIds: ["comp-back"],
+    complaintIds: ["comp-back", "comp-belly"],
     defaultDurationSec: 40,
     suggestedRhythm: {
       kind: "days",
@@ -270,6 +273,27 @@ export const CATALOG_EXERCISES: Exercise[] = [
     steps: steps([
       ["plank", "Unterarme parallel, Becken weder durchhängen noch spitz nach oben. Schau auf den Boden.", 20],
       ["child", "Knie ab, kurz in die Kindeshaltung und nachspüren."],
+    ]),
+  }),
+  exercise({
+    id: "ex-belly-wake",
+    title: "Mitte wecken",
+    summary: "Bauch und Becken kurz anschalten – Kraft für die Mitte, kein Diagnose-Programm.",
+    kind: "movement",
+    categoryIds: ["cat-body", "cat-strength"],
+    complaintIds: ["comp-belly"],
+    defaultDurationSec: 60,
+    suggestedRhythm: {
+      kind: "daily",
+      recommendedWeeks: null,
+      note: "Eine Minute, wenn du die Mitte spüren willst. Form vor Länge.",
+    },
+    steps: steps([
+      ["stand", "Aufrecht stehen, Knie weich. Atem in den Bauch, nicht pressen.", 8],
+      ["pelvicTuck", "Becken leicht kippen, Unterbauch anschalten.", 12],
+      ["plank", "Kurze Stütze: Unterarme oder Knie. Mitte trägt, Atem bleibt.", 16],
+      ["child", "Knie ab, kurz nachspüren.", 12],
+      ["stand", "Wieder aufstehen. Die Mitte darf wach bleiben.", 8],
     ]),
   }),
   exercise({
@@ -521,7 +545,7 @@ export const CATALOG_EXERCISES: Exercise[] = [
     summary: "Drei Atemzüge Länge, bevor der Tag dich übernimmt.",
     kind: "movement",
     categoryIds: ["cat-body", "cat-morning", "cat-mobility", "cat-daily"],
-    complaintIds: ["comp-back", "comp-shoulders"],
+    complaintIds: ["comp-back", "comp-shoulders", "comp-mobility"],
     defaultDurationSec: 60,
     suggestedRhythm: {
       kind: "daily",
@@ -541,7 +565,7 @@ export const CATALOG_EXERCISES: Exercise[] = [
     summary: "Nacken, Schultern, Atem – das, was du zwischen zwei Tasks vergisst.",
     kind: "movement",
     categoryIds: ["cat-daily", "cat-pause", "cat-neck", "cat-shoulders"],
-    complaintIds: ["comp-neck", "comp-shoulders", "comp-focus"],
+    complaintIds: ["comp-neck", "comp-shoulders", "comp-focus", "comp-office"],
     defaultDurationSec: 120,
     suggestedRhythm: {
       kind: "weekdays",

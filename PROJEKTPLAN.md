@@ -20,15 +20,15 @@ Quellcode: dieses Repository (`schlag-art/philipp150-I-am-fit`, Ursprung [github
 
 | Bereich | Inhalt |
 | --- | --- |
-| **Heute** | Fällige Plan-Übungen, Serie; Erstbesuch/leerer Plan: Beschwerden oder Kurzweg in unter einer Minute, dann heutige Übungen plus Erinnerungsangebot |
+| **Heute** | Fällige Plan-Übungen, Serie; Erstbesuch/leerer Plan: Thema-Chips (eine Minute), dann Heute plus Erinnerungsangebot |
 | **Sammlung** | Hierarchische Kategorien, Tags, Katalog und eigene Übungen |
 | **Plan** | Mehrere Pläne (eigene und empfangene), Rhythmus, optionaler Zeitraum, aktiver Plan für Heute, Versand per E-Mail |
-| **Beschwerden** | Symptom-Auswahl mit Vorschlägen aus dem Katalog |
+| **Themen** | Thema, Ziel oder Körperregion – Vorschläge aus dem Katalog, keine Diagnose |
 | **Import** | YouTube- oder Instagram-Link → Titel/Beschreibung → Übungen als Gliederpuppe, Felder und Figur vor/nach dem Speichern bearbeitbar; gleicher Link wird erkannt; eigene Übung auch ohne Link; Bewegungsspur nur aus Datei-Upload (nicht aus der Einbettung) |
 | **Verlauf** | 28-Tage-Raster, letzte Completions, Anzeigename |
 | **Konto** | Optionale E-Mail-Anmeldung über Supabase; ohne Login nur lokaler Speicher |
 
-Katalogstand (Systemdaten): 18 Kategorien, 8 Beschwerden, 31 Übungen (Bewegung, Atem, Mantra, Achtsamkeit, Alltag).
+Katalogstand (Systemdaten): 18 Kategorien, 11 Themen (Körperregion/Ziel/Alltag, IDs weiter `complaints`), 32 Übungen (Bewegung, Atem, Mantra, Achtsamkeit, Alltag).
 
 ## 3. Architektur
 
@@ -82,7 +82,7 @@ Katalog-SQL neu: `npm run seed:sql`. CI auf Push/PR: `npm test` und `npm run lin
 
 ### Phase A – Alltagstaugliche Web-App (da)
 
-Katalog, Plan, Heute, Import, Beschwerden, Verlauf, optionale Cloud, Vercel-Live-Umgebung.
+Katalog, Plan, Heute, Import, Themen, Verlauf, optionale Cloud, Vercel-Live-Umgebung.
 
 ### Phase B – Erinnern und Offline (da)
 
@@ -94,7 +94,7 @@ PWA-Install-Hinweis und Standalone-Erkennung, Capacitor-Projekte `android/` und 
 
 ### Phase D – Vertiefen (da)
 
-Mehr kurze Alltags- und Beschwerde-Übungen, JSON-Backup, Practice mit Pause/Wiederholung/Ende, Navigation mit Screenreader-Texten, Übernahme von lokalem Dexie-Stand ins Supabase-Konto.
+Mehr kurze Alltags- und Themen-Übungen, JSON-Backup, Practice mit Pause/Wiederholung/Ende, Navigation mit Screenreader-Texten, Übernahme von lokalem Dexie-Stand ins Supabase-Konto.
 
 Neue Arbeit wird **unten in TODO.md angehängt**. Fertiges wird dort nur abgehakt.
 
@@ -131,7 +131,7 @@ Die Figur kopiert kein Video pixelweise als Slideshow. Katalog-Schritte und Impo
 
 „App speichern“ auf Android meint die **PWA** (Zum Home-Bildschirm / Installieren) und optional die **Capacitor-Hülle**, die dieselbe Live-URL `https://i-am-super-fit.vercel.app` lädt. Beide Pfade nutzen denselben Service Worker und IndexedDB.
 
-**Offline verfügbar:** App-Shell, Sammlung, Plan, Heute, Beschwerden, Practice-Schritte und Gliederpuppen-Posen. Der Katalog (JSON) und die Posen liegen im Bundle bzw. in Dexie; beim ersten Start (auch mit Cloud) wird der Systemkatalog lokal gesät und Cloud-Stand zusätzlich **im Hintergrund** gespiegelt. Die Oberfläche wartet nicht auf Supabase: sobald Dexie Übungen hat, erscheint die Sammlung. „Cloud-Sammlung wird vorbereitet …“ ist kein Vollbild mehr und nur ein kurzes, nicht blockierendes Banner, falls lokal noch leer ist und die Cloud wirklich lädt – mit Timeout und Fallback auf den gebündelten Katalog. Offline entfällt der Cloud-Wait.
+**Offline verfügbar:** App-Shell, Sammlung, Plan, Heute, Themen, Practice-Schritte und Gliederpuppen-Posen. Der Katalog (JSON) und die Posen liegen im Bundle bzw. in Dexie; beim ersten Start (auch mit Cloud) wird der Systemkatalog lokal gesät und Cloud-Stand zusätzlich **im Hintergrund** gespiegelt. Die Oberfläche wartet nicht auf Supabase: sobald Dexie Übungen hat, erscheint die Sammlung. „Cloud-Sammlung wird vorbereitet …“ ist kein Vollbild mehr und nur ein kurzes, nicht blockierendes Banner, falls lokal noch leer ist und die Cloud wirklich lädt – mit Timeout und Fallback auf den gebündelten Katalog. Offline entfällt der Cloud-Wait.
 
 **Nur mit Internet:** Originalvideo (YouTube youtube-nocookie, Instagram-Link, sonstige Source-URL), Import-API, Plan-Einladungen, frischer Cloud-Sync, erstes Laden des MediaPipe-Modells zur Analyse. Die Practice-Seite bleibt ohne Video nutzbar und zeigt „Video braucht Internet“. Eine bereits gespeicherte Bewegungsspur spielt offline.
 
@@ -139,7 +139,7 @@ Die Figur kopiert kein Video pixelweise als Slideshow. Katalog-Schritte und Impo
 
 ## 12. Nachtrag: Import bearbeiten, Duplikate, ohne Link
 
-Nach dem Ableiten eines Links ist der Vorschlag ein Formular, keine tote Karte: Titel, Kurztext, Schritte, Dauer, Kategorien, Beschwerden und die Figur (Pose je Schritt, PosePlayer-Vorschau, optional Bewegungsspur) lassen sich vor dem Speichern ändern. Dieselbe Bearbeitung steht danach unter „Felder und Figur anpassen“ (`/catalog/[id]/edit`). YouTube bleibt Click-to-Play, Instagram outbound.
+Nach dem Ableiten eines Links ist der Vorschlag ein Formular, keine tote Karte: Titel, Kurztext, Schritte, Dauer, Kategorien, Themen und die Figur (Pose je Schritt, PosePlayer-Vorschau, optional Bewegungsspur) lassen sich vor dem Speichern ändern. Dieselbe Bearbeitung steht danach unter „Felder und Figur anpassen“ (`/catalog/[id]/edit`). YouTube bleibt Click-to-Play, Instagram outbound.
 
 Derselbe Link (normalisiert, z. B. youtu.be und watch?v=) wird in der lokalen bzw. Cloud-Sammlung erkannt – eigene Übungen und Katalog-Einträge mit Source-URL. Die App zeigt „Dieser Link ist schon in der Sammlung“, öffnet den vorhandenen Eintrag zum Anpassen und legt keine stille zweite Kopie an.
 
@@ -157,6 +157,8 @@ Analyse-UX: „Bewegung wird erkannt …“ und „Text im Video wird gelesen �
 
 Beim Datei-Upload läuft OCR (Tesseract.js, WASM) im selben Durchgang wie die Bewegungsspur, etwas sparsamer als die Pose-Abtastung. Gelesen werden Einblendungen (Titel, „Schritt n“, Übungsnamen, Dauer, links/rechts). Vorhandene YouTube-Untertitel und Beschreibungen werden **dazugemerkt**, nicht verworfen. Klare Schrittgrenzen (Schritt-Marker, nummerierte Listen, neuer Overlay-Titel) teilen `steps[]` und setzen `startSec`, damit PosePlayer den neuen Schritt zur passenden Zeit zeigt. Unklarer Rauschen erzeugt keine Extra-Schritte. Ohne Datei bleiben Captions/Metadaten wie bisher; OCR braucht Pixel – derselbe Hinweis wie bei der Bewegungsspur. Es werden keine Frame-Bilder gespeichert. Der Service Worker cached YouTube weiterhin nicht.
 
-## 15. Nachtrag: 60-Sekunden-Onboarding (Beschwerden → Heute)
+## 15. Nachtrag: Themen statt Diagnose, Erststart Thema → Heute
 
-Erstbesuch und leerer Plan: statt Katalogtour wählt die Person Beschwerden aus dem bestehenden Katalog oder einen Kurzweg („Nacken, 5 Minuten, Büro“). In unter einer Minute landet sie auf **Heute** mit wenigen, heute fälligen Übungen und einem optionalen Erinnerungsangebot. Kein Kontozwang, kein Schuldton. Dexie zuerst; Cloud nur wenn schon angemeldet. Bestehende und empfangene Pläne bleiben unangetastet. Offline, sobald der Katalog in Dexie liegt.
+Die Oberfläche sagt **Thema**, **Ziel** oder **Körperregion**, nicht Beschwerde. Menschen wollen oft Bauch oder Büro, keine Diagnose. Chips unter „Worum soll’s gehen?“: Nacken, Rücken, Bauch, Beweglichkeit, Büro. Die Tabelle heißt weiter `complaints`, die IDs (`comp-neck`, …) bleiben.
+
+Erstbesuch und leerer Plan: ein Thema, eine Minute (`durationSec` 60), Landung auf **Heute**. Dexie zuerst; bestehende und empfangene Pläne bleiben. Optional Erinnerung danach. Nav-Punkt **Themen**, Sammlung filtert nach Thema, Editor „Thema, Ziel, Körperregion“.

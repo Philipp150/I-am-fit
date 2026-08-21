@@ -145,10 +145,17 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] YouTube ohne Datei: Captions wie bisher, OCR braucht Pixel (gleicher Hinweis wie Bewegungsspur); Import schlägt ohne Text nicht fehl
 - [x] Tests für OCR→Schritte, Caption-Merge, Startzeiten, Fallback ohne Text; Lint und Production-Build
 
-## 60-Sekunden-Onboarding (Beschwerden → Heute)
+## 60-Sekunden-Onboarding (Thema → Heute)
 
-- [x] Erstbesuch und leerer Plan: Beschwerden oder Kurzweg („Nacken, 5 Minuten, Büro“) in unter einer Minute, Landung auf Heute mit machbaren Übungen
-- [x] Kein Katalogtour-Einstieg mehr; bestehender Beschwerden-Katalog; deutscher, druckfreier Text; kein Kontozwang
+- [x] Erstbesuch und leerer Plan: Thema-Chips (Nacken, Rücken, Bauch, Beweglichkeit, Büro), eine Minute, Landung auf Heute
+- [x] Kein Katalogtour-Einstieg mehr; deutscher, druckfreier Text ohne Diagnose; kein Kontozwang
 - [x] Dexie zuerst, Cloud nur wenn schon angemeldet; bestehende und empfangene Pläne nicht überschreiben
 - [x] Erinnerungsangebot nach dem Seed (ohne Druck); Onboarding offline, wenn der Katalog schon in Dexie liegt
-- [x] Tests für First-Run vs. Returning User, Plan-Seed, Kurzweg; Lint und Production-Build
+- [x] Tests für First-Run vs. Returning User, Plan-Seed, Bauch-Thema; Lint und Production-Build
+
+## Themen statt Beschwerde (Sprache)
+
+- [x] User-sichtbares „Beschwerde“ durch Thema / Ziel / Körperregion ersetzen (Nav, Heute, Sammlung-Filter, Editor, Katalog)
+- [x] Katalognamen ohne Diagnose (Nacken, Rücken, Bauch, Büro, …); IDs `complaints` / `comp-*` bleiben
+- [x] Übung „Mitte wecken“ als Bauch-Thema, 60 Sekunden
+- [x] Tests, Lint, Production-Build

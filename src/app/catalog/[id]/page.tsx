@@ -77,7 +77,7 @@ export default function ExerciseDetailPage() {
         </ul>
         {exercise.complaintIds.length > 0 && (
           <>
-            <h3 className="mt-4 font-display text-xl">Hilft bei</h3>
+            <h3 className="mt-4 font-display text-xl">Thema</h3>
             <p className="mt-1 text-sm">
               {exercise.complaintIds
                 .map((id) => complaints.find((complaint) => complaint.id === id)?.name)
