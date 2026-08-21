@@ -24,7 +24,6 @@ import { creatorAttribution } from "@/lib/plan-share";
 import { ensureNotificationPermission } from "@/lib/reminders";
 import { saveProfile } from "@/lib/repository";
 import { formatDuration, streakLength } from "@/lib/schedule";
-import type { Exercise } from "@/lib/types";
 
 export default function HomePage() {
   const exercises = useExercises();
@@ -59,7 +58,7 @@ export default function HomePage() {
     setResumeFlow(false);
   }
 
-  function handleSeeded(_picked: Exercise[]) {
+  function handleSeeded() {
     writeStorageFlag(storage, ONBOARDING_REMINDER_PENDING_KEY);
     clearStorageFlag(storage, ONBOARDING_DISMISS_KEY);
     setReminderPending(true);
