@@ -1,3 +1,10 @@
+import {
+  CLOUD_HYDRATE_TIMEOUT_MS,
+  isBrowserOnline,
+  runBootstrap,
+  shouldStartCloudHydrate,
+  withTimeout,
+} from "./bootstrap";
 import { ensureCatalogSeeded, ensureSeeded, getDb, newId } from "./db";
 import { isCloudEnabled } from "./env";
 import {
@@ -74,12 +81,25 @@ function remember(write: () => Promise<unknown>): void {
 }
 
 export async function bootstrap(): Promise<void> {
-  if (!isCloudEnabled()) {
-    await ensureSeeded();
-    return;
+  await runBootstrap({
+    cloudEnabled: isCloudEnabled(),
+    online: isBrowserOnline(),
+    seedLocal: ensureCatalogSeeded,
+    seedLocalWithPlan: ensureSeeded,
+    hydrateCloud: hydrateCloudCatalog,
+  });
+}
+
+export async function hydrateCloudCatalog(): Promise<"ok" | "timeout" | "error" | "skipped"> {
+  if (!shouldStartCloudHydrate({ cloudEnabled: isCloudEnabled(), online: isBrowserOnline() })) {
+    return "skipped";
   }
-  await ensureCatalogSeeded();
-  await hydrateOfflineFromCloud();
+  try {
+    const result = await withTimeout(hydrateOfflineFromCloud(), CLOUD_HYDRATE_TIMEOUT_MS);
+    return result === "timeout" ? "timeout" : "ok";
+  } catch {
+    return "error";
+  }
 }
 
 async function hydrateOfflineFromCloud(): Promise<void> {

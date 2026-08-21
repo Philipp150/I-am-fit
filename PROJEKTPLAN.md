@@ -131,7 +131,7 @@ Die Figur kopiert kein Video pixelweise. Katalog-Schritte und Import-Vorschläge
 
 „App speichern“ auf Android meint die **PWA** (Zum Home-Bildschirm / Installieren) und optional die **Capacitor-Hülle**, die dieselbe Live-URL `https://i-am-super-fit.vercel.app` lädt. Beide Pfade nutzen denselben Service Worker und IndexedDB.
 
-**Offline verfügbar:** App-Shell, Sammlung, Plan, Heute, Beschwerden, Practice-Schritte und Gliederpuppen-Posen. Der Katalog (JSON) und die Posen liegen im Bundle bzw. in Dexie; beim ersten Start (auch mit Cloud) wird der Systemkatalog lokal gesät und Cloud-Stand zusätzlich gespiegelt.
+**Offline verfügbar:** App-Shell, Sammlung, Plan, Heute, Beschwerden, Practice-Schritte und Gliederpuppen-Posen. Der Katalog (JSON) und die Posen liegen im Bundle bzw. in Dexie; beim ersten Start (auch mit Cloud) wird der Systemkatalog lokal gesät und Cloud-Stand zusätzlich **im Hintergrund** gespiegelt. Die Oberfläche wartet nicht auf Supabase: sobald Dexie Übungen hat, erscheint die Sammlung. „Cloud-Sammlung wird vorbereitet …“ ist kein Vollbild mehr und nur ein kurzes, nicht blockierendes Banner, falls lokal noch leer ist und die Cloud wirklich lädt – mit Timeout und Fallback auf den gebündelten Katalog. Offline entfällt der Cloud-Wait.
 
 **Nur mit Internet:** Originalvideo (YouTube youtube-nocookie, Instagram-Link, sonstige Source-URL), Import-API, Plan-Einladungen, frischer Cloud-Sync. Die Practice-Seite bleibt ohne Video nutzbar und zeigt „Video braucht Internet“.
 

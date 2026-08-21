@@ -1,4 +1,4 @@
-const CACHE = "iamfit-shell-v2";
+const CACHE = "iamfit-shell-v3";
 const PRECACHE = [
   "/",
   "/catalog",

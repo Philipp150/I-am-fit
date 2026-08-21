@@ -111,3 +111,7 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] Originalvideo offline: Übung bleibt mit Figur/Schritten; Hinweis „Video braucht Internet“
 - [x] Größenvergleich: Katalog+Posen ≪ YouTube-Minute, daher keine Video-Precache
 - [x] Tests für SW-Policy, Precache-Pfade, Dexie-Fallback und `npm run build`
+
+## Cloud-Katalog-Banner (Live)
+
+- [x] Vollbild „Cloud-Sammlung wird vorbereitet …“ bei jedem Laden entfernt: lokaler Dexie-Katalog sofort, Cloud-Hydration im Hintergrund, Timeout + Fallback, offline ohne Cloud-Wait

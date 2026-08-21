@@ -94,7 +94,7 @@ describe("catalog precache and size", () => {
 describe("service worker source", () => {
   it("does not cache YouTube or Instagram and precaches catalog shells", () => {
     const sw = readFileSync(resolve(process.cwd(), "public/sw.js"), "utf8");
-    expect(sw).toContain("iamfit-shell-v2");
+    expect(sw).toContain("iamfit-shell-v3");
     expect(sw).toContain("youtube-nocookie");
     expect(sw).toContain("googlevideo");
     expect(sw).toContain("instagram");

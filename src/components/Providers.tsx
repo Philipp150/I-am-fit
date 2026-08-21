@@ -4,53 +4,107 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { ReminderHost } from "@/components/Pwa";
 import { OfflineSupport } from "@/components/OfflineSupport";
+import { catalogStatusMessage } from "@/lib/bootstrap";
+import { getDb } from "@/lib/db";
 import { isCloudEnabled } from "@/lib/env";
-import { bootstrap } from "@/lib/repository";
+import { bootstrap, hydrateCloudCatalog } from "@/lib/repository";
 
 export function Providers({ children }: { children: ReactNode }) {
-  const [ready, setReady] = useState(false);
+  const [banner, setBanner] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    bootstrap()
-      .then(() => {
-        if (active) setReady(true);
-      })
-      .catch((err: unknown) => {
-        if (active) setError(err instanceof Error ? err.message : "Datenbankfehler");
-      });
+    (async () => {
+      try {
+        const cloudEnabled = isCloudEnabled();
+        const online = typeof navigator === "undefined" || navigator.onLine !== false;
+        const initialCount = await getDb().exercises.count();
+        if (!active) return;
+        setBanner(
+          catalogStatusMessage({
+            cloudEnabled,
+            online,
+            localSeeded: false,
+            localCatalogCount: initialCount,
+            cloudHydrating: false,
+            cloudHydrateFailed: false,
+            cloudHydrateTimedOut: false,
+          }),
+        );
+
+        await bootstrap();
+        if (!active) return;
+
+        const afterSeed = await getDb().exercises.count();
+        if (afterSeed > 0) {
+          setBanner(null);
+          return;
+        }
+
+        const cloudHydrating = cloudEnabled && online;
+        setBanner(
+          catalogStatusMessage({
+            cloudEnabled,
+            online,
+            localSeeded: true,
+            localCatalogCount: afterSeed,
+            cloudHydrating,
+            cloudHydrateFailed: false,
+            cloudHydrateTimedOut: false,
+          }),
+        );
+
+        if (!cloudHydrating) {
+          return;
+        }
+
+        const result = await hydrateCloudCatalog();
+        if (!active) return;
+        const finalCount = await getDb().exercises.count();
+        setBanner(
+          catalogStatusMessage({
+            cloudEnabled,
+            online,
+            localSeeded: true,
+            localCatalogCount: finalCount,
+            cloudHydrating: false,
+            cloudHydrateFailed: result === "error",
+            cloudHydrateTimedOut: result === "timeout",
+          }),
+        );
+      } catch (err: unknown) {
+        if (active) {
+          setBanner(null);
+          setError(err instanceof Error ? err.message : "Datenbankfehler");
+        }
+      }
+    })();
     return () => {
       active = false;
     };
   }, []);
 
   useEffect(() => {
-    if (!ready || typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
     navigator.serviceWorker.register("/sw.js").catch(() => undefined);
-  }, [ready]);
-
-  if (error) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-6 text-center">
-        <p>Die Sammlung konnte nicht geladen werden. {error}</p>
-      </div>
-    );
-  }
-
-  if (!ready) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3">
-        <div className="h-12 w-12 animate-pulse rounded-full bg-forest" />
-        <p className="text-sm text-forest-light">
-          {isCloudEnabled() ? "Cloud-Sammlung wird vorbereitet …" : "Sammlung wird vorbereitet …"}
-        </p>
-      </div>
-    );
-  }
+  }, []);
 
   return (
     <>
+      {banner ? (
+        <p
+          role="status"
+          className="fixed left-0 right-0 top-0 z-30 bg-forest px-4 py-2 text-center text-sm text-cream"
+        >
+          {banner}
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="fixed left-0 right-0 top-0 z-30 bg-clay px-4 py-2 text-center text-sm text-cream">
+          Die Sammlung konnte nicht geladen werden. {error}
+        </p>
+      ) : null}
       <ReminderHost />
       <OfflineSupport />
       {children}

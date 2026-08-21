@@ -45,4 +45,12 @@ describe("repository exports for Vercel/TypeScript", () => {
     expect(getProfile).toContain("getDb().profile.get");
     expect(getProfile).toContain('from("profiles")');
   });
+
+  it("does not await cloud catalog hydrate inside bootstrap", () => {
+    const bootstrap = exportedFunctionBody(source, "export async function bootstrap(): Promise<void> {");
+    expect(bootstrap).toContain("runBootstrap");
+    expect(bootstrap).toContain("hydrateCloud: hydrateCloudCatalog");
+    expect(bootstrap).not.toContain("await hydrateOfflineFromCloud");
+    expect(bootstrap).not.toContain("await hydrateCloudCatalog");
+  });
 });
