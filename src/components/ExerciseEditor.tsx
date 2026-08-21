@@ -95,7 +95,8 @@ export function ExerciseEditor({
         />
       </Card>
       <Card>
-        <h3 className="font-display text-xl">Hilft bei Beschwerden</h3>
+        <h3 className="font-display text-xl">Thema, Ziel, Körperregion</h3>
+        <p className="mb-2 text-sm text-forest-light">Worum soll die Übung gehen? Keine Diagnose nötig.</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {complaints.map((complaint) => (
             <button

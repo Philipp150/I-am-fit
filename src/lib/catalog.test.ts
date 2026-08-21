@@ -33,6 +33,13 @@ describe("catalog integrity", () => {
     }
   });
 
+  it("names themes as body region, goal or topic, including Bauch", () => {
+    const names = COMPLAINTS.map((item) => item.name);
+    expect(names).toEqual(expect.arrayContaining(["Nacken", "Rücken", "Bauch", "Beweglichkeit", "Büro"]));
+    expect(names.join(" ")).not.toMatch(/steifheit|schmerzen|beschwerde|unruhe|zerstreut/i);
+    expect(CATALOG_EXERCISES.some((exercise) => exercise.id === "ex-belly-wake")).toBe(true);
+  });
+
   it("draws a distinct movement for exercises that used to share a generic pose", () => {
     const byId = new Map(CATALOG_EXERCISES.map((item) => [item.id, item]));
     const poses = (id: string) => byId.get(id)?.steps.map((step) => step.pose) ?? [];

@@ -2,53 +2,32 @@ import { addExerciseToPlan } from "./plan";
 import { createPlan, ensureActivePlan, listPlanItemsForPlan } from "./repository";
 import { isoDate } from "./schedule";
 import { suggestExercisesForComplaints } from "./suggestions";
-import type { Exercise, PlanItem, TrainingPlan } from "./types";
+import type { Complaint, Exercise, PlanItem, TrainingPlan } from "./types";
 
 export const ONBOARDING_DISMISS_KEY = "iamfit-onboarding-dismissed";
 export const ONBOARDING_REMINDER_KEY = "iamfit-onboarding-reminder-done";
 export const ONBOARDING_REMINDER_PENDING_KEY = "iamfit-onboarding-reminder-pending";
+export const FIRST_RUN_DURATION_SEC = 60;
 
 export type OnboardingGate = "flow" | "cta" | "hidden";
 
-export type QuickPath = {
+export type OnboardingThemeKind = "körperregion" | "ziel" | "thema";
+
+export type OnboardingTheme = {
   id: string;
   label: string;
+  kind: OnboardingThemeKind;
+  starterId: string;
   detail: string;
-  complaintIds: string[];
-  preferCategoryIds: string[];
-  maxTotalSec: number;
-  maxCount: number;
 };
 
-/** Named shortcuts that still resolve against the live complaint catalog. */
-export const QUICK_PATHS: QuickPath[] = [
-  {
-    id: "office-neck-5",
-    label: "Nacken, 5 Minuten, Büro",
-    detail: "Sitzen oder kurz stehen – ohne auf den Boden zu müssen.",
-    complaintIds: ["comp-neck"],
-    preferCategoryIds: ["cat-pause", "cat-neck", "cat-shoulders"],
-    maxTotalSec: 5 * 60,
-    maxCount: 3,
-  },
-  {
-    id: "stress-short",
-    label: "Unruhe, kurz",
-    detail: "Atem und ein Satz. Drei Minuten, kein Programm.",
-    complaintIds: ["comp-stress"],
-    preferCategoryIds: ["cat-breath", "cat-mantras", "cat-pause"],
-    maxTotalSec: 3 * 60,
-    maxCount: 2,
-  },
-  {
-    id: "sleep",
-    label: "Schwer einschlafen",
-    detail: "Weich ausklingen, ohne spät noch zu trainieren.",
-    complaintIds: ["comp-sleep"],
-    preferCategoryIds: ["cat-evening", "cat-breath"],
-    maxTotalSec: 4 * 60,
-    maxCount: 2,
-  },
+/** First-run chips: Körperregion, Ziel, Thema – never a diagnosis. */
+export const ONBOARDING_THEMES: OnboardingTheme[] = [
+  { id: "comp-neck", label: "Nacken", kind: "körperregion", starterId: "ex-neck-circles", detail: "Kleine Bewegungen für Hals und Schultergürtel." },
+  { id: "comp-back", label: "Rücken", kind: "körperregion", starterId: "ex-cat-cow", detail: "Sanft beugen und strecken." },
+  { id: "comp-belly", label: "Bauch", kind: "ziel", starterId: "ex-belly-wake", detail: "Mitte anschalten – Kraft, keine Diagnose." },
+  { id: "comp-mobility", label: "Beweglichkeit", kind: "ziel", starterId: "ex-morning-reach", detail: "Länge und Fließen, eine Minute." },
+  { id: "comp-office", label: "Büro", kind: "thema", starterId: "ex-desk-break", detail: "Zwischendurch am Schreibtisch." },
 ];
 
 export function enabledPlanItems(items: PlanItem[]): PlanItem[] {
@@ -112,6 +91,31 @@ export function browserStorage(): Storage | null {
   } catch {
     return null;
   }
+}
+
+export function pickFirstRunExercise(themeId: string, exercises: Exercise[]): Exercise | undefined {
+  const theme = ONBOARDING_THEMES.find((item) => item.id === themeId);
+  if (theme) {
+    const starter = exercises.find((exercise) => exercise.id === theme.starterId);
+    if (starter) return starter;
+  }
+  return suggestExercisesForComplaints([themeId], exercises)[0];
+}
+
+export function firstRunPlanOverrides(now = new Date()) {
+  return {
+    durationSec: FIRST_RUN_DURATION_SEC,
+    keepUntil: null as null,
+    rhythm: { kind: "daily" as const, startDate: isoDate(now) },
+  };
+}
+
+export function orderedThemes(complaints: Complaint[]): Complaint[] {
+  const featured = ONBOARDING_THEMES.map((theme) => theme.id);
+  const byId = new Map(complaints.map((item) => [item.id, item]));
+  const first = featured.map((id) => byId.get(id)).filter((item): item is Complaint => Boolean(item));
+  const rest = complaints.filter((item) => !featured.includes(item.id));
+  return [...first, ...rest];
 }
 
 export type PickOnboardingInput = {
@@ -202,7 +206,7 @@ export async function seedOnboardingPlan(
     const id = await deps.addToPlan(exercise, {
       planId,
       rhythm: { kind: "daily", startDate },
-      durationSec: exercise.defaultDurationSec,
+      durationSec: FIRST_RUN_DURATION_SEC,
       keepUntil: null,
     });
     itemIds.push(id);

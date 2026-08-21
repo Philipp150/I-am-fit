@@ -55,6 +55,9 @@ const COMPLAINT_KEYWORDS: Array<{ id: string; pattern: RegExp }> = [
   { id: "comp-stress", pattern: /stress|unruh|angst/i },
   { id: "comp-sleep", pattern: /schlaf|insomni/i },
   { id: "comp-focus", pattern: /fokus|konzentration|zerstreut/i },
+  { id: "comp-belly", pattern: /bauch|core|\babs\b|plank/i },
+  { id: "comp-mobility", pattern: /beweglichkeit|mobility|dehn/i },
+  { id: "comp-office", pattern: /büro|buero|schreibtisch|desk|bildschirm/i },
 ];
 
 type PoseRule = {

@@ -5,13 +5,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AuthBanner } from "@/components/AuthBanner";
 import { InstallHint } from "@/components/Pwa";
-import { BookOpen, CalendarDays, HeartPulse, Sparkles } from "lucide-react";
+import { BookOpen, CalendarDays, Compass, Sparkles } from "lucide-react";
 
 const NAV = [
   { href: "/", label: "Heute", icon: Sparkles },
   { href: "/catalog", label: "Sammlung", icon: BookOpen },
   { href: "/plan", label: "Plan", icon: CalendarDays },
-  { href: "/complaints", label: "Beschwerden", icon: HeartPulse },
+  { href: "/complaints", label: "Themen", icon: Compass },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
