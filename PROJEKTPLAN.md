@@ -48,7 +48,7 @@ Vercel   │ Hosting, Import-API (/api/import)
 | Persistenz | `src/lib/repository.ts` schaltet zwischen Dexie und Supabase |
 | Cloud | `supabase/setup.sql` (Schema inkl. `plans` / `plan_invites`, RLS, Seed), `@supabase/ssr`; Tabellen existieren im Live-Projekt |
 | Import | `src/app/api/import/route.ts` + `extract-meta.ts` / `import-parse.ts` |
-| PWA | `src/app/manifest.ts`, Raster-Icons 192/512, `public/sw.js` (Offline-Cache für App-Shell und Katalog) |
+| PWA | `src/app/manifest.ts`, Raster-Icons 192/512, `public/sw.js` (Offline-Cache für App-Shell, Katalogseiten, Pose-JS; YouTube/Instagram bewusst **nicht**) |
 | Native Hülle | Capacitor 7 (`capacitor.config.ts`, App-ID `art.schlag.iamfit`); `android/` und `ios/` laden `https://i-am-super-fit.vercel.app`, damit Import-API und Auth erreichbar bleiben. |
 
 Datenmodell (Kern): `Category`, `Complaint`, `Exercise` (Schritte + Pose-IDs), `TrainingPlan` (mehrere Pläne pro Person, mit Urheber), `PlanItem` (gehört zu einem Plan), `PlanInvite` (Einladung per E-Mail), `Completion`, `Profile` (`activePlanId`). Erinnerungen (`reminderEnabled`, `reminderTime`, optional `PlanItem.reminderTime`) werden in Verlauf/Plan gesetzt und lösen lokale bzw. Web-Push-Notifications aus, solange die App oder die installierte PWA erreichbar ist.
@@ -86,7 +86,7 @@ Katalog, Plan, Heute, Import, Beschwerden, Verlauf, optionale Cloud, Vercel-Live
 
 ### Phase B – Erinnern und Offline (da)
 
-Lokale/Web-Push-Erinnerungen zur Wunschzeit, Erinnerungs-UI im Verlauf/Profil, optionale Uhrzeit pro Plan-Eintrag, Service Worker mit Offline-Cache für App-Shell und Katalog, rasterbasierte Install-Icons.
+Lokale/Web-Push-Erinnerungen zur Wunschzeit, Erinnerungs-UI im Verlauf/Profil, optionale Uhrzeit pro Plan-Eintrag, Service Worker mit Offline-Cache für App-Shell, Katalog und Übungsseiten (Dexie-Seed auch mit Cloud). YouTube/Instagram bleiben netzabhängig.
 
 ### Phase C – Handy als App (da, Store-Build folgt lokal)
 
@@ -126,3 +126,15 @@ Die Anleitung (Schritte + App-Figur) bleibt die Hauptansicht. Import liest öffe
 ## 10. Nachtrag: Gliederpuppe folgt der Übungsabsicht
 
 Die Figur kopiert kein Video pixelweise. Katalog-Schritte und Import-Vorschläge nutzen authored Keyframes (`poses.ts`): Nackenkreis in vier Richtungen, Schulterheben statt Armheben, Kiefergleiten, wechselseitiges Gehen, linke/rechte Seite bei Krieger, Hüfte und Wadendehnung. Atem im Stand oder Liegen sitzt nicht mehr unpassend hin. Ohne Pose-Estimation bleiben feine Video-Details (exakte Kreisbahn, Gesichtsmuskeln, weiche Übergänge im Clip-Tempo) angenähert.
+
+## 11. Nachtrag: Offline auf Android (PWA und Capacitor)
+
+„App speichern“ auf Android meint die **PWA** (Zum Home-Bildschirm / Installieren) und optional die **Capacitor-Hülle**, die dieselbe Live-URL `https://i-am-super-fit.vercel.app` lädt. Beide Pfade nutzen denselben Service Worker und IndexedDB.
+
+**Offline verfügbar:** App-Shell, Sammlung, Plan, Heute, Beschwerden, Practice-Schritte und Gliederpuppen-Posen. Der Katalog (JSON) und die Posen liegen im Bundle bzw. in Dexie; beim ersten Start (auch mit Cloud) wird der Systemkatalog lokal gesät und Cloud-Stand zusätzlich gespiegelt.
+
+**Nur mit Internet:** Originalvideo (YouTube youtube-nocookie, Instagram-Link, sonstige Source-URL), Import-API, Plan-Einladungen, frischer Cloud-Sync. Die Practice-Seite bleibt ohne Video nutzbar und zeigt „Video braucht Internet“.
+
+**Datenmenge:** Katalog + Kategorien + Beschwerden + Posen liegen im Bereich weniger Dutzend KB (weit unter einer YouTube-Minute, grob ≥ 8 MB). YouTube-Streams werden deshalb **nicht** vorab geladen.
+
+Capacitor: erster Kaltstart braucht Netz, um die Live-App zu laden. Danach gelten SW-Cache und Dexie wie in der installierten PWA. `webDir: out` bleibt Fallback; Store-Builds sollen weiter `server.url` auf Vercel nutzen.

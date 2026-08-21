@@ -4,6 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect, useState } from "react";
 import { getDb } from "@/lib/db";
 import { isCloudEnabled } from "@/lib/env";
+import { pickCachedList, pickCachedOne } from "@/lib/offline";
 import { subscribeData } from "@/lib/notify";
 import {
   currentUser,
@@ -30,18 +31,24 @@ const EMPTY_PLANS: TrainingPlan[] = [];
 const EMPTY_INVITES: PlanInvite[] = [];
 const EMPTY_COMPLETIONS: Completion[] = [];
 
-function useCloudQuery<T>(loader: () => Promise<T>, fallback: T, deps: unknown[]): T {
-  const [value, setValue] = useState<T>(fallback);
+type QueryStatus = "pending" | "ok" | "error";
+
+function useCloudQuery<T>(loader: () => Promise<T>, fallback: T, deps: unknown[]): { data: T; status: QueryStatus } {
+  const [data, setData] = useState<T>(fallback);
+  const [status, setStatus] = useState<QueryStatus>(() => (isCloudEnabled() ? "pending" : "ok"));
   useEffect(() => {
     if (!isCloudEnabled()) return;
     let active = true;
     const load = () => {
       loader()
         .then((next) => {
-          if (active) setValue(next);
+          if (active) {
+            setData(next);
+            setStatus("ok");
+          }
         })
         .catch(() => {
-          if (active) setValue(fallback);
+          if (active) setStatus((prev) => (prev === "ok" ? "ok" : "error"));
         });
     };
     load();
@@ -53,97 +60,133 @@ function useCloudQuery<T>(loader: () => Promise<T>, fallback: T, deps: unknown[]
     // loader/fallback are stable enough when callers pass module functions or wrap id in deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
-  return value;
+  return { data, status };
+}
+
+function pickList<T>(remote: { data: T[]; status: QueryStatus }, local: T[]): T[] {
+  return pickCachedList(isCloudEnabled(), remote, local);
+}
+
+function pickOne<T>(remote: { data: T | undefined; status: QueryStatus }, local: T | undefined): T | undefined {
+  return pickCachedOne(isCloudEnabled(), remote, local);
 }
 
 export function useSession(): SessionUser | null | undefined {
   const remote = useCloudQuery(currentUser, null, []);
   if (!isCloudEnabled()) return { id: "solo" };
-  return remote;
+  return remote.data;
 }
 
 export function useExercises(): Exercise[] {
   const local =
-    useLiveQuery(() => (isCloudEnabled() ? Promise.resolve(EMPTY_EXERCISES) : getDb().exercises.orderBy("title").toArray()), []) ??
-    EMPTY_EXERCISES;
+    useLiveQuery(
+      () => (typeof window === "undefined" ? EMPTY_EXERCISES : getDb().exercises.orderBy("title").toArray()),
+      [],
+    ) ?? EMPTY_EXERCISES;
   const remote = useCloudQuery(listExercises, EMPTY_EXERCISES, []);
-  return isCloudEnabled() ? remote : local;
+  return pickList(remote, local);
 }
 
 export function useExercise(id: string | undefined): Exercise | undefined {
-  const local = useLiveQuery(() => (isCloudEnabled() || !id ? undefined : getDb().exercises.get(id)), [id]);
+  const local = useLiveQuery(
+    () => (typeof window === "undefined" || !id ? undefined : getDb().exercises.get(id)),
+    [id],
+  );
   const remote = useCloudQuery(() => (id ? getExercise(id) : Promise.resolve(undefined)), undefined, [id]);
-  return isCloudEnabled() ? remote : local;
+  return pickOne(remote, local);
 }
 
 export function useCategories(): Category[] {
   const local =
-    useLiveQuery(() => (isCloudEnabled() ? Promise.resolve(EMPTY_CATEGORIES) : getDb().categories.toArray()), []) ?? EMPTY_CATEGORIES;
+    useLiveQuery(
+      () => (typeof window === "undefined" ? EMPTY_CATEGORIES : getDb().categories.toArray()),
+      [],
+    ) ?? EMPTY_CATEGORIES;
   const remote = useCloudQuery(listCategories, EMPTY_CATEGORIES, []);
-  return isCloudEnabled() ? remote : local;
+  return pickList(remote, local);
 }
 
 export function useComplaints(): Complaint[] {
   const local =
-    useLiveQuery(() => (isCloudEnabled() ? Promise.resolve(EMPTY_COMPLAINTS) : getDb().complaints.toArray()), []) ?? EMPTY_COMPLAINTS;
+    useLiveQuery(
+      () => (typeof window === "undefined" ? EMPTY_COMPLAINTS : getDb().complaints.toArray()),
+      [],
+    ) ?? EMPTY_COMPLAINTS;
   const remote = useCloudQuery(listComplaints, EMPTY_COMPLAINTS, []);
-  return isCloudEnabled() ? remote : local;
+  return pickList(remote, local);
 }
 
 export function usePlans(): TrainingPlan[] {
-  const local = useLiveQuery(() => (isCloudEnabled() ? Promise.resolve(EMPTY_PLANS) : getDb().plans.toArray()), []) ?? EMPTY_PLANS;
+  const local =
+    useLiveQuery(() => (typeof window === "undefined" ? EMPTY_PLANS : getDb().plans.toArray()), []) ?? EMPTY_PLANS;
   const remote = useCloudQuery(listPlans, EMPTY_PLANS, []);
-  return isCloudEnabled() ? remote : local;
+  return pickList(remote, local);
 }
 
 export function usePlan(id: string | undefined): TrainingPlan | undefined {
-  const local = useLiveQuery(() => (isCloudEnabled() || !id ? undefined : getDb().plans.get(id)), [id]);
+  const local = useLiveQuery(
+    () => (typeof window === "undefined" || !id ? undefined : getDb().plans.get(id)),
+    [id],
+  );
   const remote = useCloudQuery(() => (id ? getPlan(id) : Promise.resolve(undefined)), undefined, [id]);
-  return isCloudEnabled() ? remote : local;
+  return pickOne(remote, local);
 }
 
 export function usePlanItemsFor(planId: string | undefined): PlanItem[] {
   const local =
     useLiveQuery(
-      () => (isCloudEnabled() || !planId ? Promise.resolve(EMPTY_PLAN) : getDb().planItems.where("planId").equals(planId).toArray()),
+      () =>
+        typeof window === "undefined" || !planId
+          ? Promise.resolve(EMPTY_PLAN)
+          : getDb().planItems.where("planId").equals(planId).toArray(),
       [planId],
     ) ?? EMPTY_PLAN;
   const remote = useCloudQuery(() => (planId ? listPlanItemsForPlan(planId) : Promise.resolve(EMPTY_PLAN)), EMPTY_PLAN, [planId]);
-  return isCloudEnabled() ? remote : local;
+  return pickList(remote, local);
 }
 
 export function usePlanItems(): PlanItem[] {
   const local =
     useLiveQuery(async () => {
-      if (isCloudEnabled()) return EMPTY_PLAN;
+      if (typeof window === "undefined") return EMPTY_PLAN;
       const db = getDb();
-      const profile = await db.profile.get("solo");
+      const profiles = await db.profile.toArray();
+      const profile = profiles.find((item) => item.activePlanId) ?? profiles[0];
       if (!profile?.activePlanId) return db.planItems.toArray();
       return db.planItems.where("planId").equals(profile.activePlanId).toArray();
     }, []) ?? EMPTY_PLAN;
   const remote = useCloudQuery(listActivePlanItems, EMPTY_PLAN, []);
-  return isCloudEnabled() ? remote : local;
+  return pickList(remote, local);
 }
 
 export function usePendingInvites(): PlanInvite[] {
   const remote = useCloudQuery(listPendingInvites, EMPTY_INVITES, []);
-  return isCloudEnabled() ? remote : EMPTY_INVITES;
+  return isCloudEnabled() ? remote.data : EMPTY_INVITES;
 }
 
 export function useCompletions(): Completion[] {
   const local =
     useLiveQuery(
-      () => (isCloudEnabled() ? Promise.resolve(EMPTY_COMPLETIONS) : getDb().completions.orderBy("completedAt").reverse().toArray()),
+      () =>
+        typeof window === "undefined"
+          ? EMPTY_COMPLETIONS
+          : getDb().completions.orderBy("completedAt").reverse().toArray(),
       [],
     ) ?? EMPTY_COMPLETIONS;
   const remote = useCloudQuery(listCompletions, EMPTY_COMPLETIONS, []);
-  return isCloudEnabled() ? remote : local;
+  return pickList(remote, local);
 }
 
 export function useProfile(): Profile | undefined {
-  const local = useLiveQuery(() => (isCloudEnabled() ? undefined : getDb().profile.get("solo")), []);
+  const local = useLiveQuery(async () => {
+    if (typeof window === "undefined") return undefined;
+    const db = getDb();
+    const profiles = await db.profile.toArray();
+    if (!isCloudEnabled()) return db.profile.get("solo");
+    return profiles.find((item) => item.id !== "solo") ?? profiles[0];
+  }, []);
   const remote = useCloudQuery(getProfile, undefined, []);
-  return isCloudEnabled() ? remote : local;
+  return pickOne(remote, local);
 }
 
 export function useActivePlan(): TrainingPlan | undefined {

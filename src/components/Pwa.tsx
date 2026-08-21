@@ -97,8 +97,8 @@ export function InstallHint() {
       <p className="font-medium">Als App aufs Handy</p>
       <p className="mt-1 text-forest-light">
         {promptEvent
-          ? "Dann bleibt die Erinnerung auf dem Home-Bildschirm, ohne Store."
-          : "Im Teilen-Menü „Zum Home-Bildschirm“ wählen. Danach öffnet sich I am fit wie eine App."}
+          ? "Dann bleiben Übungen, Plan und Erinnerung auf dem Home-Bildschirm – auch offline. Videos brauchen Internet."
+          : "Im Teilen-Menü „Zum Home-Bildschirm“ wählen. Danach öffnet sich I am fit wie eine App, mit Katalog auch ohne Netz."}
       </p>
       <div className="mt-2 flex gap-2">
         {promptEvent && (

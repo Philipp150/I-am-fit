@@ -75,7 +75,7 @@ Im mobilen Browser: *Zum Home-Bildschirm* / *Als App installieren*. Die App zeig
 
 Erinnerungen (Uhrzeit unter Verlauf, optional pro Plan-Eintrag) brauchen eine Notification-Erlaubnis. Sie feuern lokal bzw. über den Service Worker, solange die App oder die installierte PWA erreichbar ist.
 
-Offline: der Service Worker hält App-Shell und Katalog. Die Import-API braucht Netz.
+Offline: nach der Installation (PWA oder Capacitor gegen die Live-URL) bleiben Katalog, Plan, Heute, Beschwerden und die Gliederpuppe ohne Netz nutzbar. Originalvideos (YouTube/Instagram) werden nicht gespeichert und brauchen Internet; die Übung selbst bleibt sichtbar.
 
 ### Capacitor (Android / iOS)
 

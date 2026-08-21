@@ -65,61 +65,63 @@ export function getDb(): FitDatabase {
   return db;
 }
 
-export async function ensureSeeded(): Promise<void> {
+export async function ensureCatalogSeeded(): Promise<void> {
   const database = getDb();
-  await database.transaction(
-    "rw",
-    [database.categories, database.complaints, database.exercises, database.plans, database.profile],
-    async () => {
-      const categoryCount = await database.categories.count();
-      if (categoryCount === 0) {
-        await database.categories.bulkAdd(CATEGORIES);
-      } else {
-        for (const category of CATEGORIES) {
-          const existing = await database.categories.get(category.id);
-          if (!existing) await database.categories.add(category);
-        }
+  await database.transaction("rw", [database.categories, database.complaints, database.exercises], async () => {
+    const categoryCount = await database.categories.count();
+    if (categoryCount === 0) {
+      await database.categories.bulkAdd(CATEGORIES);
+    } else {
+      for (const category of CATEGORIES) {
+        const existing = await database.categories.get(category.id);
+        if (!existing) await database.categories.add(category);
       }
+    }
 
-      const complaintCount = await database.complaints.count();
-      if (complaintCount === 0) {
-        await database.complaints.bulkAdd(COMPLAINTS);
-      } else {
-        for (const complaint of COMPLAINTS) {
-          const existing = await database.complaints.get(complaint.id);
-          if (!existing) await database.complaints.add(complaint);
-        }
+    const complaintCount = await database.complaints.count();
+    if (complaintCount === 0) {
+      await database.complaints.bulkAdd(COMPLAINTS);
+    } else {
+      for (const complaint of COMPLAINTS) {
+        const existing = await database.complaints.get(complaint.id);
+        if (!existing) await database.complaints.add(complaint);
       }
+    }
 
-      for (const exercise of CATALOG_EXERCISES) {
-        const existing = await database.exercises.get(exercise.id);
-        if (!existing) {
-          await database.exercises.add(exercise);
-        } else if (existing.isSystem) {
-          await database.exercises.put({
-            ...exercise,
-            createdAt: existing.createdAt,
-            updatedAt: exercise.updatedAt,
-          });
-        }
+    for (const exercise of CATALOG_EXERCISES) {
+      const existing = await database.exercises.get(exercise.id);
+      if (!existing) {
+        await database.exercises.add(exercise);
+      } else if (existing.isSystem) {
+        await database.exercises.put({
+          ...exercise,
+          createdAt: existing.createdAt,
+          updatedAt: exercise.updatedAt,
+        });
       }
+    }
+  });
+}
 
-      const planCount = await database.plans.count();
-      if (planCount === 0) {
-        await database.plans.add(defaultPersonalPlan("solo", DEFAULT_PROFILE.createdAt));
-      }
+export async function ensureSeeded(): Promise<void> {
+  await ensureCatalogSeeded();
+  const database = getDb();
+  await database.transaction("rw", [database.plans, database.profile], async () => {
+    const planCount = await database.plans.count();
+    if (planCount === 0) {
+      await database.plans.add(defaultPersonalPlan("solo", DEFAULT_PROFILE.createdAt));
+    }
 
-      const profile = await database.profile.get("solo");
-      if (!profile) {
-        await database.profile.add(DEFAULT_PROFILE);
-      } else if (!profile.activePlanId) {
-        const fallback = (await database.plans.toArray())[0];
-        if (fallback) {
-          await database.profile.put({ ...profile, activePlanId: fallback.id });
-        }
+    const profile = await database.profile.get("solo");
+    if (!profile) {
+      await database.profile.add(DEFAULT_PROFILE);
+    } else if (!profile.activePlanId) {
+      const fallback = (await database.plans.toArray())[0];
+      if (fallback) {
+        await database.profile.put({ ...profile, activePlanId: fallback.id });
       }
-    },
-  );
+    }
+  });
 }
 
 export function newId(prefix: string): string {

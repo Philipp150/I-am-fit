@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { ReminderHost } from "@/components/Pwa";
+import { OfflineSupport } from "@/components/OfflineSupport";
 import { isCloudEnabled } from "@/lib/env";
 import { bootstrap } from "@/lib/repository";
 
@@ -51,6 +52,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <>
       <ReminderHost />
+      <OfflineSupport />
       {children}
     </>
   );

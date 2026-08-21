@@ -1,4 +1,4 @@
-import { ensureSeeded, getDb, newId } from "./db";
+import { ensureCatalogSeeded, ensureSeeded, getDb, newId } from "./db";
 import { isCloudEnabled } from "./env";
 import {
   completionFromRow,
@@ -68,16 +68,40 @@ export async function currentUser(): Promise<SessionUser | null> {
   return { id: data.user.id, email: data.user.email };
 }
 
+function remember(write: () => Promise<unknown>): void {
+  if (typeof window === "undefined") return;
+  void write().catch(() => undefined);
+}
+
 export async function bootstrap(): Promise<void> {
-  if (isCloudEnabled()) return;
-  await ensureSeeded();
+  if (!isCloudEnabled()) {
+    await ensureSeeded();
+    return;
+  }
+  await ensureCatalogSeeded();
+  await hydrateOfflineFromCloud();
+}
+
+async function hydrateOfflineFromCloud(): Promise<void> {
+  try {
+    await Promise.all([listCategories(), listComplaints(), listExercises()]);
+  } catch {
+    // Catalog seed in Dexie is enough to practice offline.
+  }
+  try {
+    const user = await currentUser();
+    if (!user) return;
+    await Promise.all([listPlans(), listAllPlanItems(), listCompletions(), getProfile()]);
+  } catch {
+    // Plan/Heute fall back to the last Dexie snapshot.
+  }
 }
 
 export async function listCategories(): Promise<Category[]> {
   if (!isCloudEnabled()) return getDb().categories.toArray();
   const { data, error } = await createBrowserSupabase().from("categories").select("*").order("name");
   throwIfError(error);
-  return ((data ?? []) as CategoryRow[]).map((row) => ({
+  const items = ((data ?? []) as CategoryRow[]).map((row) => ({
     id: row.id,
     name: row.name,
     slug: row.slug,
@@ -85,32 +109,40 @@ export async function listCategories(): Promise<Category[]> {
     description: row.description,
     isSystem: row.is_system,
   }));
+  if (items.length > 0) remember(() => getDb().categories.bulkPut(items));
+  return items;
 }
 
 export async function listComplaints(): Promise<Complaint[]> {
   if (!isCloudEnabled()) return getDb().complaints.toArray();
   const { data, error } = await createBrowserSupabase().from("complaints").select("*").order("name");
   throwIfError(error);
-  return ((data ?? []) as ComplaintRow[]).map((row) => ({
+  const items = ((data ?? []) as ComplaintRow[]).map((row) => ({
     id: row.id,
     name: row.name,
     summary: row.summary,
     hint: row.hint,
   }));
+  if (items.length > 0) remember(() => getDb().complaints.bulkPut(items));
+  return items;
 }
 
 export async function listExercises(): Promise<Exercise[]> {
   if (!isCloudEnabled()) return getDb().exercises.orderBy("title").toArray();
   const { data, error } = await createBrowserSupabase().from("exercises").select("*").order("title");
   throwIfError(error);
-  return ((data ?? []) as ExerciseRow[]).map(exerciseFromRow);
+  const items = ((data ?? []) as ExerciseRow[]).map(exerciseFromRow);
+  if (items.length > 0) remember(() => getDb().exercises.bulkPut(items));
+  return items;
 }
 
 export async function getExercise(id: string): Promise<Exercise | undefined> {
   if (!isCloudEnabled()) return getDb().exercises.get(id);
   const { data, error } = await createBrowserSupabase().from("exercises").select("*").eq("id", id).maybeSingle();
   throwIfError(error);
-  return data ? exerciseFromRow(data as ExerciseRow) : undefined;
+  const exercise = data ? exerciseFromRow(data as ExerciseRow) : undefined;
+  if (exercise) remember(() => getDb().exercises.put(exercise));
+  return exercise;
 }
 
 export async function saveExercise(exercise: Exercise): Promise<void> {
@@ -123,6 +155,7 @@ export async function saveExercise(exercise: Exercise): Promise<void> {
   if (!user) throw new Error("Bitte zuerst anmelden, um eigene Übungen zu speichern.");
   const { error } = await createBrowserSupabase().from("exercises").upsert(exerciseToRow(exercise, user.id));
   throwIfError(error);
+  remember(() => getDb().exercises.put(exercise));
   notifyData();
 }
 
@@ -137,6 +170,7 @@ export async function deleteExercise(id: string): Promise<void> {
   }
   const { error } = await createBrowserSupabase().from("exercises").delete().eq("id", id);
   throwIfError(error);
+  remember(() => getDb().exercises.delete(id));
   notifyData();
 }
 
@@ -150,7 +184,9 @@ export async function listPlans(): Promise<TrainingPlan[]> {
   if (!user) return [];
   const { data, error } = await createBrowserSupabase().from("plans").select("*").order("created_at", { ascending: false });
   throwIfError(error);
-  return ((data ?? []) as TrainingPlanRow[]).map(trainingPlanFromRow);
+  const items = ((data ?? []) as TrainingPlanRow[]).map(trainingPlanFromRow);
+  if (items.length > 0) remember(() => getDb().plans.bulkPut(items));
+  return items;
 }
 
 export async function getPlan(id: string): Promise<TrainingPlan | undefined> {
@@ -159,7 +195,9 @@ export async function getPlan(id: string): Promise<TrainingPlan | undefined> {
   if (!user) return undefined;
   const { data, error } = await createBrowserSupabase().from("plans").select("*").eq("id", id).maybeSingle();
   throwIfError(error);
-  return data ? trainingPlanFromRow(data as TrainingPlanRow) : undefined;
+  const plan = data ? trainingPlanFromRow(data as TrainingPlanRow) : undefined;
+  if (plan) remember(() => getDb().plans.put(plan));
+  return plan;
 }
 
 export async function savePlan(plan: TrainingPlan): Promise<void> {
@@ -172,6 +210,7 @@ export async function savePlan(plan: TrainingPlan): Promise<void> {
   if (!user) throw new Error("Bitte zuerst anmelden, um Pläne zu speichern.");
   const { error } = await createBrowserSupabase().from("plans").upsert(trainingPlanToRow(plan, user.id));
   throwIfError(error);
+  remember(() => getDb().plans.put(plan));
   notifyData();
 }
 
@@ -234,6 +273,12 @@ export async function deletePlan(id: string): Promise<void> {
   const profile = await getProfile();
   const { error } = await createBrowserSupabase().from("plans").delete().eq("id", id);
   throwIfError(error);
+  remember(async () => {
+    const db = getDb();
+    const related = await db.planItems.where("planId").equals(id).toArray();
+    await db.planItems.bulkDelete(related.map((item) => item.id));
+    await db.plans.delete(id);
+  });
   if (profile?.activePlanId === id) {
     const next = (await listPlans()).find((item) => item.id !== id && !item.archived);
     await setActivePlan(next?.id ?? null);
@@ -287,7 +332,9 @@ export async function listAllPlanItems(): Promise<PlanItem[]> {
   if (!user) return [];
   const { data, error } = await createBrowserSupabase().from("plan_items").select("*").order("created_at");
   throwIfError(error);
-  return ((data ?? []) as PlanRow[]).map(planFromRow);
+  const items = ((data ?? []) as PlanRow[]).map(planFromRow);
+  if (items.length > 0) remember(() => getDb().planItems.bulkPut(items));
+  return items;
 }
 
 export async function listPlanItemsForPlan(planId: string): Promise<PlanItem[]> {
@@ -300,7 +347,9 @@ export async function listPlanItemsForPlan(planId: string): Promise<PlanItem[]> 
     .eq("plan_id", planId)
     .order("created_at");
   throwIfError(error);
-  return ((data ?? []) as PlanRow[]).map(planFromRow);
+  const items = ((data ?? []) as PlanRow[]).map(planFromRow);
+  if (items.length > 0) remember(() => getDb().planItems.bulkPut(items));
+  return items;
 }
 
 export async function listActivePlanItems(): Promise<PlanItem[]> {
@@ -327,6 +376,7 @@ export async function savePlanItem(item: PlanItem): Promise<void> {
   if (!user) throw new Error("Bitte zuerst anmelden, um den Plan zu speichern.");
   const { error } = await createBrowserSupabase().from("plan_items").upsert(planToRow(item, user.id));
   throwIfError(error);
+  remember(() => getDb().planItems.put(item));
   notifyData();
 }
 
@@ -338,6 +388,7 @@ export async function deletePlanItem(id: string): Promise<void> {
   }
   const { error } = await createBrowserSupabase().from("plan_items").delete().eq("id", id);
   throwIfError(error);
+  remember(() => getDb().planItems.delete(id));
   notifyData();
 }
 
@@ -350,7 +401,9 @@ export async function listCompletions(): Promise<Completion[]> {
     .select("*")
     .order("completed_at", { ascending: false });
   throwIfError(error);
-  return ((data ?? []) as CompletionRow[]).map(completionFromRow);
+  const items = ((data ?? []) as CompletionRow[]).map(completionFromRow);
+  if (items.length > 0) remember(() => getDb().completions.bulkPut(items));
+  return items;
 }
 
 export async function addCompletion(item: Completion): Promise<void> {
@@ -371,16 +424,16 @@ export async function addCompletion(item: Completion): Promise<void> {
     skipped: Boolean(item.skipped),
   });
   throwIfError(error);
+  remember(() => getDb().completions.put(item));
   notifyData();
-}
-
-export async function getProfile(): Promise<Profile | undefined> {
   if (!isCloudEnabled()) return getDb().profile.get("solo");
   const user = await currentUser();
   if (!user) return undefined;
   const { data, error } = await createBrowserSupabase().from("profiles").select("*").eq("id", user.id).maybeSingle();
   throwIfError(error);
-  return data ? profileFromRow(data as ProfileRow) : undefined;
+  const profile = data ? profileFromRow(data as ProfileRow) : undefined;
+  if (profile) remember(() => getDb().profile.put(profile));
+  return profile;
 }
 
 export async function saveProfile(profile: Profile): Promise<void> {
@@ -400,6 +453,7 @@ export async function saveProfile(profile: Profile): Promise<void> {
     created_at: profile.createdAt,
   });
   throwIfError(error);
+  remember(() => getDb().profile.put({ ...profile, id: user.id }));
   notifyData();
 }
 

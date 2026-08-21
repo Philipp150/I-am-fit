@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ExternalLink, Play } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ExternalLink, Play, WifiOff } from "lucide-react";
 import {
   instagramOpenUrl,
   isSafeHttpUrl,
@@ -17,8 +17,41 @@ type Props = {
   className?: string;
 };
 
+function useOnline(): boolean {
+  const [online, setOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
+  useEffect(() => {
+    function update() {
+      setOnline(navigator.onLine);
+    }
+    update();
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
+  return online;
+}
+
+function VideoNeedsInternet() {
+  return (
+    <div
+      className="mt-3 flex aspect-video w-full max-w-sm flex-col items-center justify-center gap-2 rounded-2xl bg-forest-dark/10 px-4 text-center"
+      role="status"
+    >
+      <WifiOff className="h-5 w-5 text-forest" aria-hidden />
+      <p className="text-sm font-medium text-forest-dark">Video braucht Internet</p>
+      <p className="text-xs leading-relaxed text-forest-light">
+        Die Anleitung mit der Figur bleibt offline. Original clip needs a connection – we don’t store YouTube or Instagram on the phone.
+      </p>
+    </div>
+  );
+}
+
 export function SourceVideo({ url, thumbnailUrl, className = "" }: Props) {
   const [open, setOpen] = useState(false);
+  const online = useOnline();
   if (!url || !isSafeHttpUrl(url)) return null;
 
   const kind = playbackKind(url);
@@ -34,7 +67,9 @@ export function SourceVideo({ url, thumbnailUrl, className = "" }: Props) {
         Die Anleitung oben bleibt maßgeblich. Das Original kannst du dir extra ansehen – wir laden es erst nach einem Tipp.
       </p>
 
-      {kind === "youtube" && videoId ? (
+      {!online ? <VideoNeedsInternet /> : null}
+
+      {online && kind === "youtube" && videoId ? (
         <div className="relative mt-3 aspect-video w-full max-w-sm overflow-hidden rounded-2xl bg-forest-dark/10">
           {open ? (
             <iframe
@@ -65,7 +100,7 @@ export function SourceVideo({ url, thumbnailUrl, className = "" }: Props) {
         </div>
       ) : null}
 
-      {kind === "instagram" ? (
+      {online && kind === "instagram" ? (
         <div className="mt-3 space-y-2">
           {poster ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -90,7 +125,7 @@ export function SourceVideo({ url, thumbnailUrl, className = "" }: Props) {
         </div>
       ) : null}
 
-      {kind === "link" ? (
+      {online && kind === "link" ? (
         <a
           href={url}
           target="_blank"

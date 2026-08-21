@@ -101,3 +101,12 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] Import-Targeting: Titel und Schritttext steuern die Pose; „Schritt 1“ ist kein Gehen; „Schultern nicht hochziehen“ ist kein Shrug
 - [x] PosePlayer bleibt primär; YouTube bleibt Click-to-Play und treibt die Figur nicht
 - [x] Tests für Posen, Katalog-Schritte und Import-Zuordnung; CaptionTrack-`null`-Bug nicht wieder eingeführt
+
+## Android-Offline (Katalog ohne Videos)
+
+- [x] Service Worker: App-Shell plus alle Katalog-Übungsseiten precachen; YouTube/Instagram/googlevideo/blob-Video nicht cachen
+- [x] Dexie-Katalog auch bei aktivem Supabase säen und Cloud-Stand lokal spiegeln, damit Heute/Sammlung/Practice ohne Netz öffnen
+- [x] PWA-Install und Capacitor-WebView (Live-URL) nutzen denselben Offline-Pfad
+- [x] Originalvideo offline: Übung bleibt mit Figur/Schritten; Hinweis „Video braucht Internet“
+- [x] Größenvergleich: Katalog+Posen ≪ YouTube-Minute, daher keine Video-Precache
+- [x] Tests für SW-Policy, Precache-Pfade, Dexie-Fallback und `npm run build`
