@@ -61,6 +61,19 @@ describe("YouTube captions from the public page", () => {
     expect(isYoutubeTimedTextUrl(picked?.baseUrl ?? "")).toBe(true);
   });
 
+  it("skips captionTracks entries without a URL or language", () => {
+    const html = `"captionTracks":[null,{"languageCode":"en"},{"baseUrl":"https://www.youtube.com/api/timedtext?v=aaaaaaaaaaa&lang=de","languageCode":"de"}]`;
+    const tracks = extractYoutubeCaptionTracks(html);
+    expect(tracks).toEqual([
+      {
+        baseUrl: "https://www.youtube.com/api/timedtext?v=aaaaaaaaaaa&lang=de",
+        languageCode: "de",
+        kind: undefined,
+        name: undefined,
+      },
+    ]);
+  });
+
   it("parses timedtext XML into readable text", () => {
     const xml = `
       <?xml version="1.0" encoding="utf-8" ?>

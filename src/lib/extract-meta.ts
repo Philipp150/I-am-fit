@@ -41,25 +41,30 @@ export function extractYoutubeShortDescription(html: string): string {
 export function extractYoutubeCaptionTracks(html: string): CaptionTrack[] {
   const parsed = extractJsonArrayAfter(html, "captionTracks");
   if (!Array.isArray(parsed)) return [];
-  return parsed
-    .map((entry) => {
-      if (!entry || typeof entry !== "object") return null;
-      const record = entry as Record<string, unknown>;
-      const baseUrl = typeof record.baseUrl === "string" ? record.baseUrl : "";
-      const languageCode = typeof record.languageCode === "string" ? record.languageCode : "";
-      if (!baseUrl || !languageCode) return null;
-      const kind = typeof record.kind === "string" ? record.kind : undefined;
-      const name =
-        record.name && typeof record.name === "object" && record.name !== null
-          ? typeof (record.name as { simpleText?: unknown }).simpleText === "string"
-            ? (record.name as { simpleText: string }).simpleText
-            : undefined
-          : typeof record.name === "string"
-            ? record.name
-            : undefined;
-      return { baseUrl, languageCode, kind, name } satisfies CaptionTrack;
-    })
-    .filter((track): track is CaptionTrack => Boolean(track));
+  const tracks: CaptionTrack[] = [];
+  for (const entry of parsed) {
+    const track = captionTrackFromUnknown(entry);
+    if (track) tracks.push(track);
+  }
+  return tracks;
+}
+
+function captionTrackFromUnknown(entry: unknown): CaptionTrack | null {
+  if (!entry || typeof entry !== "object") return null;
+  const record = entry as Record<string, unknown>;
+  const baseUrl = typeof record.baseUrl === "string" ? record.baseUrl : "";
+  const languageCode = typeof record.languageCode === "string" ? record.languageCode : "";
+  if (!baseUrl || !languageCode) return null;
+  const kind = typeof record.kind === "string" ? record.kind : undefined;
+  const name =
+    record.name && typeof record.name === "object" && record.name !== null
+      ? typeof (record.name as { simpleText?: unknown }).simpleText === "string"
+        ? (record.name as { simpleText: string }).simpleText
+        : undefined
+      : typeof record.name === "string"
+        ? record.name
+        : undefined;
+  return { baseUrl, languageCode, kind, name };
 }
 
 export function pickCaptionTrack(tracks: CaptionTrack[]): CaptionTrack | null {

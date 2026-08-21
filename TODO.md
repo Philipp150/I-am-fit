@@ -81,6 +81,10 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] Projektplan nach größeren Phasen aktualisieren (nur ergänzen, Todo nicht leeren)
 - [x] Cursor-Regel `.cursor/rules/projektplan-todo.mdc` (`alwaysApply`): Plan und Todo vor der Arbeit lesen, danach fortschreiben; `TODO.md` nie löschen; diese Regeldatei nicht neu erzeugen oder überschreiben
 
+## Betrieb (Vercel)
+
+- [x] Production-Build: TypeScript-Fehler in `extractYoutubeCaptionTracks` (`map` + `null` nicht als `CaptionTrack[]`) beheben, damit Vercel `i-am-super-fit` wieder deployt
+
 ## Originalvideo und Import-Qualität
 
 - [x] Originalvideo zusätzlich in Practice und Katalog zeigen (Anleitung/PosePlayer bleibt primär)
