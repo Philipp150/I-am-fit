@@ -135,3 +135,4 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] YouTube/Instagram: Metadaten + PoseId-Fallback, klarer Hinweis zum Hochladen; kein yt-dlp
 - [x] PosePlayer: Spur wenn vorhanden, sonst PoseIds; Schritte weiter editierbar; Neu-Erkennen ersetzt die Spur
 - [x] Tests für JSON-Form, Track-Playback, PoseId-Fallback, Upload-Pfad; Lint und Production-Build
+- [x] Live-Supabase: Spalte `exercises.pose_track` (jsonb) existiert (GET rest/v1/exercises?select=id,pose_track HTTP 200 mit `pose_track` im Payload; keine Secrets im Repo)
