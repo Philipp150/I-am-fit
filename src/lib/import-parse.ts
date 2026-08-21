@@ -66,19 +66,69 @@ const POSE_KEYWORDS: Array<{ pose: PoseId; pattern: RegExp }> = [
   { pose: "reachUp", pattern: /strecken|reach|arme hoch/i },
 ];
 
+export type ImportErrorCode =
+  | "empty_url"
+  | "invalid_url"
+  | "unsupported_protocol"
+  | "fetch_failed"
+  | "missing_meta";
+
+export type ImportProblem = {
+  code: ImportErrorCode;
+  message: string;
+};
+
+export const IMPORT_MESSAGES: Record<ImportErrorCode, string> = {
+  empty_url: "Bitte einen Link einfügen.",
+  invalid_url: "Das ist kein gültiger Link. Bitte eine vollständige Adresse mit https:// einfügen.",
+  unsupported_protocol: "Nur Links mit http:// oder https:// können gelesen werden.",
+  fetch_failed:
+    "Der Link konnte nicht gelesen werden. Prüfe, ob er öffentlich erreichbar ist, und versuche es erneut.",
+  missing_meta:
+    "Zu diesem Link fehlen verwertbare Metadaten (Titel oder Beschreibung). Ein privates, geblocktes oder sehr kurzes Video lässt sich so nicht ableiten.",
+};
+
 export function detectProvider(url: string): ImportMeta["provider"] {
   if (/youtube\.com|youtu\.be/i.test(url)) return "youtube";
   if (/instagram\.com/i.test(url)) return "instagram";
   return "web";
 }
 
-export function isSupportedSourceUrl(url: string): boolean {
+export function validateSourceUrl(raw: string): ImportProblem | null {
+  const url = raw.trim();
+  if (!url) return { code: "empty_url", message: IMPORT_MESSAGES.empty_url };
+  let parsed: URL;
   try {
-    const parsed = new URL(url);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
+    parsed = new URL(url);
   } catch {
-    return false;
+    return { code: "invalid_url", message: IMPORT_MESSAGES.invalid_url };
   }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return { code: "unsupported_protocol", message: IMPORT_MESSAGES.unsupported_protocol };
+  }
+  return null;
+}
+
+export function isSupportedSourceUrl(url: string): boolean {
+  return validateSourceUrl(url) === null;
+}
+
+export function looksLikeHostnameTitle(title: string, url: string): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+    const normalized = title.trim().toLowerCase();
+    return !normalized || normalized === host || normalized === `www.${host}`;
+  } catch {
+    return !title.trim();
+  }
+}
+
+export function hasUsableMeta(meta: Pick<ImportMeta, "title" | "description" | "url">): boolean {
+  const title = meta.title.trim();
+  const description = meta.description.trim();
+  if (title.length >= 3 && description.length >= 8) return true;
+  if (title.length >= 8 && !looksLikeHostnameTitle(title, meta.url)) return true;
+  return false;
 }
 
 export function extractNumberedItems(text: string): string[] {

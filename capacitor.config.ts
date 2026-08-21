@@ -1,13 +1,15 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
+const LIVE_URL = "https://i-am-super-fit.vercel.app";
+
 const config: CapacitorConfig = {
   appId: "art.schlag.iamfit",
   appName: "I am fit",
   webDir: "out",
   server: {
-    // For store builds, point this at the hosted Next.js app
-    // so API routes (Import) remain available.
-    // androidScheme: "https",
+    // Native shells load the hosted Next.js app so Import-API and Auth stay on Vercel.
+    url: LIVE_URL,
+    androidScheme: "https",
   },
 };
 

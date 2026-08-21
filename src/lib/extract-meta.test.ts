@@ -10,7 +10,7 @@ describe("extractMetaFromHtml", () => {
         <meta property="og:site_name" content="YouTube" />
       </head></html>
     `;
-    expect(extractMetaFromHtml(html, "https://youtu.be/x")).toEqual({
+    expect(extractMetaFromHtml(html)).toEqual({
       title: "Nacken Yoga",
       description: "5 Minuten am Schreibtisch",
       author: "YouTube",
@@ -19,6 +19,14 @@ describe("extractMetaFromHtml", () => {
 
   it("falls back to the title tag", () => {
     const html = `<html><head><title>Instagram Reel</title></head></html>`;
-    expect(extractMetaFromHtml(html, "https://instagram.com/reel/1").title).toBe("Instagram Reel");
+    expect(extractMetaFromHtml(html).title).toBe("Instagram Reel");
+  });
+
+  it("leaves title empty when metadata is missing", () => {
+    expect(extractMetaFromHtml("<html></html>")).toEqual({
+      title: "",
+      description: "",
+      author: undefined,
+    });
   });
 });

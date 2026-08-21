@@ -6,8 +6,14 @@ export function supabaseAnonKey(): string | undefined {
   return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 }
 
+export type StorageBackend = "local" | "cloud";
+
 export function isCloudEnabled(): boolean {
   return Boolean(supabaseUrl() && supabaseAnonKey());
+}
+
+export function storageBackend(): StorageBackend {
+  return isCloudEnabled() ? "cloud" : "local";
 }
 
 export function siteUrl(): string {

@@ -1,9 +1,9 @@
-export function extractMetaFromHtml(html: string, url: string): { title: string; description: string; author?: string } {
+export function extractMetaFromHtml(html: string): { title: string; description: string; author?: string } {
   const ogTitle = matchMeta(html, "og:title") || matchTitle(html);
   const ogDescription = matchMeta(html, "og:description") || matchMeta(html, "description");
   const author = matchMeta(html, "og:site_name") || matchMeta(html, "author");
   return {
-    title: decode(ogTitle || hostFallback(url)),
+    title: decode(ogTitle || ""),
     description: decode(ogDescription || ""),
     author: author ? decode(author) : undefined,
   };
@@ -23,14 +23,6 @@ function matchMeta(html: string, name: string): string | null {
 
 function matchTitle(html: string): string | null {
   return html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1] ?? null;
-}
-
-function hostFallback(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return "Importierte Übung";
-  }
 }
 
 function escapeRegExp(value: string): string {

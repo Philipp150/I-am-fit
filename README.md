@@ -60,14 +60,45 @@ Stand, Phasen und offene Arbeit: [PROJEKTPLAN.md](PROJEKTPLAN.md), [TODO.md](TOD
 npm install
 cp .env.example .env.local
 npm test
+npm run lint
 npm run dev
 ```
 
-Katalog-SQL neu erzeugen: `npm run seed:sql` (danach `schema.sql` und `seed.sql` zu `setup.sql` zusammenfügen).
+Katalog-SQL neu erzeugen: `npm run seed:sql` (danach `schema.sql` und `seed.sql` zu `setup.sql` zusammenfügen). Raster-Icons: `npm run icons`.
+
+CI (GitHub Actions auf Push und Pull Request) führt `npm test` und `npm run lint` aus.
 
 ## Aufs Handy
 
-Im mobilen Browser: *Zum Home-Bildschirm* / *Als App installieren*. Nach dem Login über Vercel+Supabase ist der Plan derselbe wie am PC.
+Im mobilen Browser: *Zum Home-Bildschirm* / *Als App installieren*. Die App zeigt einen Hinweis, wenn der Browser das anbietet, und erkennt die Standalone-Darstellung. Nach dem Login über Vercel+Supabase ist der Plan derselbe wie am PC.
+
+Erinnerungen (Uhrzeit unter Verlauf, optional pro Plan-Eintrag) brauchen eine Notification-Erlaubnis. Sie feuern lokal bzw. über den Service Worker, solange die App oder die installierte PWA erreichbar ist.
+
+Offline: der Service Worker hält App-Shell und Katalog. Die Import-API braucht Netz.
+
+### Capacitor (Android / iOS)
+
+Die Hüllen liegen in `android/` und `ios/` und laden die Live-App, nicht den lokalen `out/`-Export. Dadurch bleiben `/api/import` und Auth auf Vercel.
+
+```bash
+npm run cap:sync
+```
+
+Android: Projekt in Android Studio öffnen. iOS: `ios/App` in Xcode öffnen (macOS, CocoaPods: `cd ios/App && pod install`).
+
+| Store-Feld | Wert |
+| --- | --- |
+| App-ID / Bundle-ID | `art.schlag.iamfit` |
+| Anzeigename | I am fit |
+| Live-URL | https://i-am-super-fit.vercel.app |
+| PWA-Icons | `public/icon-192.png`, `public/icon-512.png` (plus SVG) |
+| Store-Icon | 1024×1024 aus derselben Figur, in Xcode/Play Console |
+
+## Backup und Konto-Wechsel
+
+Unter **Verlauf** gibt es ein JSON-Backup von eigenen Übungen, Plan und Verlauf. Katalog-Übungen stehen nicht in der Datei.
+
+Wenn du zuerst lokal geübt hast und dich später anmeldest, kannst du den Dexie-Stand dort ins Supabase-Konto kopieren.
 
 ## Hinweis zum Import
 

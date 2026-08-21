@@ -1,18 +1,33 @@
 import { NextResponse } from "next/server";
 import { extractMetaFromHtml } from "@/lib/extract-meta";
-import { deriveExercisesFromMeta, detectProvider, isSupportedSourceUrl, type ImportMeta } from "@/lib/import-parse";
+import {
+  deriveExercisesFromMeta,
+  detectProvider,
+  hasUsableMeta,
+  IMPORT_MESSAGES,
+  validateSourceUrl,
+  type ImportMeta,
+} from "@/lib/import-parse";
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as { url?: string };
+  let body: { url?: string } = {};
+  try {
+    body = (await request.json()) as { url?: string };
+  } catch {
+    return NextResponse.json({ error: IMPORT_MESSAGES.invalid_url, code: "invalid_url" }, { status: 400 });
+  }
+
   const url = body.url?.trim() ?? "";
-  if (!isSupportedSourceUrl(url)) {
-    return NextResponse.json({ error: "Bitte eine gültige http(s)-Adresse einfügen." }, { status: 400 });
+  const invalid = validateSourceUrl(url);
+  if (invalid) {
+    return NextResponse.json({ error: invalid.message, code: invalid.code }, { status: 400 });
   }
 
   const provider = detectProvider(url);
   let title = "";
   let description = "";
   let author: string | undefined;
+  let fetchedSomething = false;
 
   try {
     if (provider === "youtube") {
@@ -22,6 +37,7 @@ export async function POST(request: Request) {
         const oembed = (await oembedResponse.json()) as { title?: string; author_name?: string };
         title = oembed.title ?? "";
         author = oembed.author_name;
+        fetchedSomething = Boolean(title);
       }
     }
 
@@ -33,32 +49,32 @@ export async function POST(request: Request) {
       },
     });
     if (pageResponse.ok) {
+      fetchedSomething = true;
       const html = await pageResponse.text();
-      const extracted = extractMetaFromHtml(html.slice(0, 200_000), url);
+      const extracted = extractMetaFromHtml(html.slice(0, 200_000));
       title = title || extracted.title;
       description = extracted.description;
       author = author || extracted.author;
     }
   } catch {
-    // Fall back to URL-derived metadata below.
+    // Handled below if nothing usable arrived.
   }
 
-  if (!title) {
-    try {
-      const parsed = new URL(url);
-      title = decodeURIComponent(parsed.pathname.split("/").filter(Boolean).pop() || parsed.hostname);
-    } catch {
-      title = "Importierte Übung";
-    }
+  if (!fetchedSomething && !title && !description) {
+    return NextResponse.json({ error: IMPORT_MESSAGES.fetch_failed, code: "fetch_failed" }, { status: 422 });
   }
 
   const meta: ImportMeta = {
     url,
     provider,
-    title,
-    description,
+    title: title.trim(),
+    description: description.trim(),
     author,
   };
+
+  if (!hasUsableMeta(meta)) {
+    return NextResponse.json({ error: IMPORT_MESSAGES.missing_meta, code: "missing_meta" }, { status: 422 });
+  }
 
   return NextResponse.json({
     meta,

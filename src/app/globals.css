@@ -20,6 +20,17 @@ body {
   color: #1c2a26;
 }
 
+:focus-visible {
+  outline: 2px solid #1f3f37;
+  outline-offset: 2px;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid #1f3f37;
+  outline-offset: 2px;
+}
+
 ::selection {
   background: #a9c5b5;
   color: #1c2a26;

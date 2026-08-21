@@ -44,6 +44,7 @@ export default function PlanPage() {
                     {rhythmLabel(item.rhythm.kind, item.rhythm.daysOfWeek, item.rhythm.everyNDays)} ·{" "}
                     {formatDuration(item.durationSec ?? exercise.defaultDurationSec)}
                     {item.keepUntil ? ` · bis ${item.keepUntil}` : " · unbegrenzt"}
+                    {item.reminderTime ? ` · Erinnerung ${item.reminderTime}` : ""}
                   </p>
                   <p className="mt-1 text-xs text-ink/60">{due ? "Heute vorgesehen" : "Heute Pause"}</p>
                 </div>
@@ -80,6 +81,7 @@ function EditPlan({ item, onClose }: { item: PlanItem; onClose: () => void }) {
   });
   const [keepUntil, setKeepUntil] = useState<string | null>(item.keepUntil ?? null);
   const [durationSec, setDurationSec] = useState(item.durationSec ?? 60);
+  const [reminderTime, setReminderTime] = useState(item.reminderTime ?? "");
 
   async function save() {
     await savePlanItem({
@@ -87,6 +89,7 @@ function EditPlan({ item, onClose }: { item: PlanItem; onClose: () => void }) {
       rhythm: { ...item.rhythm, ...rhythm },
       keepUntil,
       durationSec,
+      reminderTime: reminderTime.trim() || undefined,
     });
     onClose();
   }
@@ -101,6 +104,14 @@ function EditPlan({ item, onClose }: { item: PlanItem; onClose: () => void }) {
       <RhythmFields value={rhythm} onChange={setRhythm} keepUntil={keepUntil} onKeepUntil={setKeepUntil} />
       <Field label="Dauer in Sekunden">
         <input type="number" min={15} className={fieldClass} value={durationSec} onChange={(event) => setDurationSec(Number(event.target.value))} />
+      </Field>
+      <Field label="Eigene Erinnerung (optional)">
+        <input
+          type="time"
+          className={fieldClass}
+          value={reminderTime}
+          onChange={(event) => setReminderTime(event.target.value)}
+        />
       </Field>
       <div className="flex gap-2">
         <PrimaryButton onClick={save}>Speichern</PrimaryButton>

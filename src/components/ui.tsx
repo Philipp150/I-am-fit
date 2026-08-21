@@ -28,7 +28,7 @@ export function PrimaryButton({
 }: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
-      className={`inline-flex items-center justify-center rounded-full bg-forest px-5 py-3 text-sm font-medium text-cream disabled:opacity-50 ${className}`}
+      className={`inline-flex items-center justify-center rounded-full bg-forest px-5 py-3 text-sm font-medium text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 disabled:opacity-50 ${className}`}
       {...props}
     >
       {children}
@@ -43,7 +43,7 @@ export function SecondaryButton({
 }: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
-      className={`inline-flex items-center justify-center rounded-full border border-forest/20 bg-white/50 px-5 py-3 text-sm font-medium text-forest disabled:opacity-50 ${className}`}
+      className={`inline-flex items-center justify-center rounded-full border border-forest/30 bg-white/50 px-5 py-3 text-sm font-medium text-forest-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 disabled:opacity-50 ${className}`}
       {...props}
     >
       {children}
@@ -61,4 +61,4 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 }
 
 export const fieldClass =
-  "w-full rounded-2xl border border-sand bg-white/70 px-3 py-2.5 text-ink outline-none ring-forest/30 focus:ring-2";
+  "w-full rounded-2xl border border-sand bg-white/70 px-3 py-2.5 text-ink outline-none ring-forest/30 focus:ring-2 focus-visible:ring-2";

@@ -1,6 +1,24 @@
-import { addDays, isoDate } from "./schedule";
+import { addDays, isoDate, isPlanItemDueOn } from "./schedule";
 import { newId, listPlanItems, savePlanItem, addCompletion } from "./repository";
-import type { Exercise, PlanItem, RhythmKind } from "./types";
+import type { Completion, Exercise, PlanItem, RhythmKind } from "./types";
+
+export function todayOverview(planItems: PlanItem[], completions: Completion[], date: Date) {
+  const todayIso = isoDate(date);
+  const due = planItems.filter((item) => isPlanItemDueOn(item, date));
+  const doneIds = new Set(
+    completions
+      .filter((item) => item.completedAt.slice(0, 10) === todayIso && !item.skipped)
+      .map((item) => item.exerciseId),
+  );
+  const remaining = due.filter((item) => !doneIds.has(item.exerciseId));
+  return {
+    todayIso,
+    due,
+    remaining,
+    doneCount: due.filter((item) => doneIds.has(item.exerciseId)).length,
+    allDone: due.length > 0 && remaining.length === 0,
+  };
+}
 
 export async function addExerciseToPlan(
   exercise: Exercise,
@@ -26,6 +44,7 @@ export async function addExerciseToPlan(
       rhythm,
       durationSec: overrides?.durationSec ?? exercise.defaultDurationSec,
       keepUntil,
+      reminderTime: existing.reminderTime,
     });
     return existing.id;
   }

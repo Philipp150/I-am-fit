@@ -4,7 +4,9 @@ import {
   detectProvider,
   extractNumberedItems,
   guessKind,
+  hasUsableMeta,
   isSupportedSourceUrl,
+  validateSourceUrl,
 } from "./import-parse";
 
 describe("import parsing", () => {
@@ -15,6 +17,13 @@ describe("import parsing", () => {
     expect(detectProvider("https://example.com/p")).toBe("web");
     expect(isSupportedSourceUrl("https://youtu.be/abc")).toBe(true);
     expect(isSupportedSourceUrl("not-a-url")).toBe(false);
+    expect(validateSourceUrl("")).toMatchObject({ code: "empty_url" });
+    expect(validateSourceUrl("ftp://example.com/x")).toMatchObject({ code: "unsupported_protocol" });
+    expect(validateSourceUrl("just text")).toMatchObject({ code: "invalid_url" });
+    expect(hasUsableMeta({ url: "https://youtu.be/abc", title: "youtu.be", description: "" })).toBe(false);
+    expect(hasUsableMeta({ url: "https://youtu.be/abc", title: "Nacken Yoga am Schreibtisch", description: "" })).toBe(
+      true,
+    );
   });
 
   it("splits numbered lists into candidate titles", () => {

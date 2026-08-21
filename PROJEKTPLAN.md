@@ -28,7 +28,7 @@ Quellcode: dieses Repository (`schlag-art/philipp150-I-am-fit`, Ursprung [github
 | **Verlauf** | 28-Tage-Raster, letzte Completions, Anzeigename |
 | **Konto** | Optionale E-Mail-Anmeldung über Supabase; ohne Login nur lokaler Speicher |
 
-Katalogstand (Systemdaten): 18 Kategorien, 8 Beschwerden, 24 Übungen (Bewegung, Atem, Mantra, Achtsamkeit, Alltag).
+Katalogstand (Systemdaten): 18 Kategorien, 8 Beschwerden, 31 Übungen (Bewegung, Atem, Mantra, Achtsamkeit, Alltag).
 
 ## 3. Architektur
 
@@ -48,10 +48,10 @@ Vercel   │ Hosting, Import-API (/api/import)
 | Persistenz | `src/lib/repository.ts` schaltet zwischen Dexie und Supabase |
 | Cloud | `supabase/setup.sql` (Schema, RLS, Seed), `@supabase/ssr` |
 | Import | `src/app/api/import/route.ts` + `extract-meta.ts` / `import-parse.ts` |
-| PWA | `src/app/manifest.ts`, `public/sw.js` (derzeit Durchleitung ohne Cache) |
-| Native Hülle | Capacitor 7 (`capacitor.config.ts`, App-ID `art.schlag.iamfit`); `android/` und `ios/` sind noch nicht im Repo |
+| PWA | `src/app/manifest.ts`, Raster-Icons 192/512, `public/sw.js` (Offline-Cache für App-Shell und Katalog) |
+| Native Hülle | Capacitor 7 (`capacitor.config.ts`, App-ID `art.schlag.iamfit`); `android/` und `ios/` laden `https://i-am-super-fit.vercel.app`, damit Import-API und Auth erreichbar bleiben. |
 
-Datenmodell (Kern): `Category`, `Complaint`, `Exercise` (Schritte + Pose-IDs), `PlanItem`, `Completion`, `Profile`. Erinnerungsfelder (`reminderEnabled`, `reminderTime`) existieren im Modell, werden in der UI noch nicht gesetzt und lösen keine Notifications aus.
+Datenmodell (Kern): `Category`, `Complaint`, `Exercise` (Schritte + Pose-IDs), `PlanItem`, `Completion`, `Profile`. Erinnerungen (`reminderEnabled`, `reminderTime`, optional `PlanItem.reminderTime`) werden in Verlauf/Plan gesetzt und lösen lokale bzw. Web-Push-Notifications aus, solange die App oder die installierte PWA erreichbar ist.
 
 ## 4. Betrieb
 
@@ -74,34 +74,34 @@ npm run lint
 npm run dev
 ```
 
-Katalog-SQL neu: `npm run seed:sql`.
+Katalog-SQL neu: `npm run seed:sql`. CI auf Push/PR: `npm test` und `npm run lint`.
 
 ## 5. Phasen
 
-### Phase A – Alltagstaugliche Web-App (weitgehend da)
+### Phase A – Alltagstaugliche Web-App (da)
 
 Katalog, Plan, Heute, Import, Beschwerden, Verlauf, optionale Cloud, Vercel-Live-Umgebung.
 
-### Phase B – Erinnern und Offline
+### Phase B – Erinnern und Offline (da)
 
-Lokale/Web-Push-Erinnerungen zur Wunschzeit, Erinnerungs-UI im Verlauf/Profil, Service Worker mit sinnvollem Offline-Cache, rasterbasierte Install-Icons.
+Lokale/Web-Push-Erinnerungen zur Wunschzeit, Erinnerungs-UI im Verlauf/Profil, optionale Uhrzeit pro Plan-Eintrag, Service Worker mit Offline-Cache für App-Shell und Katalog, rasterbasierte Install-Icons.
 
-### Phase C – Handy als App
+### Phase C – Handy als App (da, Store-Build folgt lokal)
 
-PWA-Install härten, Capacitor-Projekte für Android und iOS erzeugen, Store-Builds gegen die gehostete URL (Import-API bleibt auf Vercel).
+PWA-Install-Hinweis und Standalone-Erkennung, Capacitor-Projekte `android/` und `ios/` im Repo, WebView gegen die gehostete URL (`i-am-super-fit.vercel.app`). Import-API bleibt auf Vercel. Store-Build mit Android Studio bzw. Xcode (macOS).
 
-### Phase D – Vertiefen
+### Phase D – Vertiefen (da)
 
-Mehr Katalog und Beschwerden, Export/Backup, Tests über die Lib-Grenzen hinaus, Barrierefreiheit und Feinschliff der Practice-Ansicht.
+Mehr kurze Alltags- und Beschwerde-Übungen, JSON-Backup, Practice mit Pause/Wiederholung/Ende, Navigation mit Screenreader-Texten, Übernahme von lokalem Dexie-Stand ins Supabase-Konto.
 
 Neue Arbeit wird **unten in TODO.md angehängt**. Fertiges wird dort nur abgehakt.
 
 ## 6. Risiken und Grenzen
 
 - YouTube/Instagram liefern Metadaten, keine Videoanalyse. Vorschläge vor dem Speichern prüfen.
-- Capacitor `webDir` ist `out`; Store-Builds sollen die gehostete Next.js-App ansprechen, sonst fehlen API-Routen.
-- Erinnerungsfelder ohne Notification-Pfad erzeugen keine echten Erinnerungen.
-- Cloud und lokaler Dexie-Stand sind getrennte Welten; ein späterer Migrationspfad ist offen.
+- Capacitor `webDir` ist `out` und nur Fallback; Store-Builds laden die gehostete Next.js-App (`server.url`), sonst fehlen API-Routen.
+- Erinnerungen brauchen eine Notification-Erlaubnis und eine geöffnete oder installierte App; ohne Push-Server gibt es keine Zustellung bei komplett geschlossenem Browser.
+- Cloud und lokaler Dexie-Stand bleiben getrennte Speicher; die Übernahme ins Konto liegt unter Verlauf.
 
 ## 7. Dokumentation
 

@@ -9,6 +9,7 @@ import type { DraftExercise, Exercise } from "@/lib/types";
 
 type ImportResponse = {
   error?: string;
+  code?: string;
   meta?: { title: string; provider: string; url: string };
   drafts?: DraftExercise[];
 };
@@ -34,6 +35,9 @@ export default function ImportPage() {
       const data = (await response.json()) as ImportResponse;
       if (!response.ok || data.error || !data.drafts) {
         throw new Error(data.error || "Import fehlgeschlagen");
+      }
+      if (data.drafts.length === 0) {
+        throw new Error("Zu diesem Link konnten keine Übungen abgeleitet werden. Titel und Beschreibung fehlen oder sind zu knapp.");
       }
       setDrafts(data.drafts);
       setSelected(data.drafts.map(() => true));
@@ -87,7 +91,11 @@ export default function ImportPage() {
       <PrimaryButton disabled={!url || loading} onClick={analyze}>
         {loading ? "Lesen …" : "Übungen ableiten"}
       </PrimaryButton>
-      {error && <p className="text-sm text-clay">{error}</p>}
+      {error && (
+        <p className="rounded-2xl bg-clay/15 px-4 py-3 text-sm text-forest-dark" role="alert">
+          {error}
+        </p>
+      )}
       {drafts.length > 0 && (
         <Card>
           <h3 className="font-display text-xl">Vorschlag</h3>

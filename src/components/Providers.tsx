@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { ReminderHost } from "@/components/Pwa";
 import { isCloudEnabled } from "@/lib/env";
 import { bootstrap } from "@/lib/repository";
 
@@ -18,13 +19,15 @@ export function Providers({ children }: { children: ReactNode }) {
       .catch((err: unknown) => {
         if (active) setError(err instanceof Error ? err.message : "Datenbankfehler");
       });
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
-    }
     return () => {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!ready || typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+  }, [ready]);
 
   if (error) {
     return (
@@ -45,5 +48,10 @@ export function Providers({ children }: { children: ReactNode }) {
     );
   }
 
-  return children;
+  return (
+    <>
+      <ReminderHost />
+      {children}
+    </>
+  );
 }

@@ -41,7 +41,8 @@ export default function ComplaintsPage() {
               key={complaint.id}
               type="button"
               onClick={() => toggle(complaint.id)}
-              className={`rounded-full px-3 py-2 text-sm ${active ? "bg-forest text-cream" : "bg-white/70 text-forest"}`}
+            className={`rounded-full px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest ${active ? "bg-forest text-cream" : "bg-white/70 text-forest-dark"}`}
+            aria-pressed={active}
             >
               {complaint.name}
             </button>

@@ -40,6 +40,7 @@ export default function CatalogPage() {
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Suchen in der Sammlung"
+        aria-label="Sammlung durchsuchen"
         className={fieldClass}
       />
       <div className="flex gap-2">
@@ -48,7 +49,8 @@ export default function CatalogPage() {
             key={value}
             type="button"
             onClick={() => setOrigin(value)}
-            className={`rounded-full px-3 py-1.5 text-sm ${origin === value ? "bg-forest text-cream" : "bg-white/70 text-forest"}`}
+            className={`rounded-full px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest ${origin === value ? "bg-forest text-cream" : "bg-white/70 text-forest-dark"}`}
+            aria-pressed={origin === value}
           >
             {value === "all" ? "Alle" : value === "catalog" ? "Katalog" : "Meine"}
           </button>

@@ -39,37 +39,37 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] Unit-Tests für Katalog, Zeitplan, Mapper, Import, Vorschläge, Kategorien, Seed-SQL
 - [x] SQL-Seed aus dem Katalog erzeugen (`npm run seed:sql`)
 - [x] RLS-Policies für eigene Daten in Supabase
-- [ ] `npm test` und `npm run lint` in der CI bzw. vor jedem Merge grün halten
-- [ ] Tests für Plan-Logik, Repository-Schalter (lokal/Cloud) und kritische UI-Pfade
-- [ ] Fehlerfälle beim Import klarer machen (ungültiger Link, fehlende Metadaten)
+- [x] `npm test` und `npm run lint` in der CI bzw. vor jedem Merge grün halten
+- [x] Tests für Plan-Logik, Repository-Schalter (lokal/Cloud) und kritische UI-Pfade
+- [x] Fehlerfälle beim Import klarer machen (ungültiger Link, fehlende Metadaten)
 
 ## Erinnerungen und Offline (Phase B)
 
-- [ ] Erinnerungszeit und -schalter in der UI (Profil/Verlauf) setzen können
-- [ ] Lokale oder Web-Push-Erinnerung zur Wunschzeit
-- [ ] Optional erinnern pro Plan-Eintrag (`PlanItem.reminderTime`)
-- [ ] Service Worker: Offline-Cache für App-Shell und Katalog statt reiner Durchleitung
-- [ ] Raster-Icons für die Installation (neben SVG)
-- [ ] Service Worker in der App registrieren, wenn der Cache steht
+- [x] Erinnerungszeit und -schalter in der UI (Profil/Verlauf) setzen können
+- [x] Lokale oder Web-Push-Erinnerung zur Wunschzeit
+- [x] Optional erinnern pro Plan-Eintrag (`PlanItem.reminderTime`)
+- [x] Service Worker: Offline-Cache für App-Shell und Katalog statt reiner Durchleitung
+- [x] Raster-Icons für die Installation (neben SVG)
+- [x] Service Worker in der App registrieren, wenn der Cache steht
 
 ## Handy als App (Phase C)
 
-- [ ] PWA-Install-Hinweis und Standalone-Darstellung prüfen
-- [ ] Capacitor-Projekt Android erzeugen und gegen die Live-URL betreiben
-- [ ] Capacitor-Projekt iOS erzeugen und gegen die Live-URL betreiben
-- [ ] Import-API in Native-Builds über das gehostete Backend erreichbar halten
-- [ ] Store-Assets und App-IDs dokumentieren
+- [x] PWA-Install-Hinweis und Standalone-Darstellung prüfen
+- [x] Capacitor-Projekt Android erzeugen und gegen die Live-URL betreiben
+- [x] Capacitor-Projekt iOS erzeugen und gegen die Live-URL betreiben
+- [x] Import-API in Native-Builds über das gehostete Backend erreichbar halten
+- [x] Store-Assets und App-IDs dokumentieren
 
 ## Vertiefen (Phase D)
 
-- [ ] Katalog um weitere kurze Alltags- und Beschwerde-Übungen erweitern
-- [ ] Export oder Backup von Plan und eigenen Übungen
-- [ ] Practice-Ansicht: Pause, Wiederholung, klare Beendigung
-- [ ] Barrierefreiheit (Kontrast, Fokus, Screenreader-Texte an der Navigation)
-- [ ] Migrationspfad zwischen lokalem Dexie-Stand und Supabase-Konto
+- [x] Katalog um weitere kurze Alltags- und Beschwerde-Übungen erweitern
+- [x] Export oder Backup von Plan und eigenen Übungen
+- [x] Practice-Ansicht: Pause, Wiederholung, klare Beendigung
+- [x] Barrierefreiheit (Kontrast, Fokus, Screenreader-Texte an der Navigation)
+- [x] Migrationspfad zwischen lokalem Dexie-Stand und Supabase-Konto
 
 ## Dokumentation
 
 - [x] Hosting-Unterschied Vercel vs. Supabase beschreiben
 - [x] Hinweis: Import ist Metadaten, keine Videoanalyse
-- [ ] Projektplan nach größeren Phasen aktualisieren (nur ergänzen, Todo nicht leeren)
+- [x] Projektplan nach größeren Phasen aktualisieren (nur ergänzen, Todo nicht leeren)
