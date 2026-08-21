@@ -24,7 +24,7 @@ Quellcode: dieses Repository (`schlag-art/philipp150-I-am-fit`, Ursprung [github
 | **Sammlung** | Hierarchische Kategorien, Tags, Katalog und eigene Übungen |
 | **Plan** | Mehrere Pläne (eigene und empfangene), Rhythmus, optionaler Zeitraum, aktiver Plan für Heute, Versand per E-Mail |
 | **Beschwerden** | Symptom-Auswahl mit Vorschlägen aus dem Katalog |
-| **Import** | YouTube- oder Instagram-Link → Titel/Beschreibung → Übungen als Gliederpuppe; Originalvideo nur zusätzlich |
+| **Import** | YouTube- oder Instagram-Link → Titel/Beschreibung → Übungen als Gliederpuppe, Felder und Figur vor/nach dem Speichern bearbeitbar; gleicher Link wird erkannt; eigene Übung auch ohne Link |
 | **Verlauf** | 28-Tage-Raster, letzte Completions, Anzeigename |
 | **Konto** | Optionale E-Mail-Anmeldung über Supabase; ohne Login nur lokaler Speicher |
 
@@ -100,7 +100,7 @@ Neue Arbeit wird **unten in TODO.md angehängt**. Fertiges wird dort nur abgehak
 
 ## 6. Risiken und Grenzen
 
-- YouTube/Instagram liefern Metadaten, keine Videoanalyse. Vorschläge vor dem Speichern prüfen.
+- YouTube/Instagram liefern Metadaten, keine Videoanalyse. Vorschläge vor dem Speichern prüfen und anpassen (Titel, Schritte, Figur). Derselbe Link öffnet den vorhandenen Eintrag statt einer stillen Kopie. Eigene Übungen gehen auch ohne Link.
 - Capacitor `webDir` ist `out` und nur Fallback; Store-Builds laden die gehostete Next.js-App (`server.url`), sonst fehlen API-Routen.
 - Erinnerungen brauchen eine Notification-Erlaubnis und eine geöffnete oder installierte App; ohne Push-Server gibt es keine Zustellung bei komplett geschlossenem Browser.
 - Cloud und lokaler Dexie-Stand bleiben getrennte Speicher; die Übernahme ins Konto liegt unter Verlauf.
@@ -137,4 +137,10 @@ Die Figur kopiert kein Video pixelweise. Katalog-Schritte und Import-Vorschläge
 
 **Datenmenge:** Katalog JSON ~33 KB, Posen ~15 KB, zusammen ~48 KB. First-Load-JS der App-Shell liegt um 226 KB. Eine YouTube-Minute liegt grob bei ≥ 8 MB. Videos werden deshalb **nicht** vorab geladen.
 
-Capacitor: erster Kaltstart braucht Netz, um die Live-App zu laden. Danach gelten SW-Cache und Dexie wie in der installierten PWA. `webDir: out` bleibt Fallback; Store-Builds sollen weiter `server.url` auf Vercel nutzen.
+## 12. Nachtrag: Import bearbeiten, Duplikate, ohne Link
+
+Nach dem Ableiten eines Links ist der Vorschlag ein Formular, keine tote Karte: Titel, Kurztext, Schritte, Dauer, Kategorien, Beschwerden und die Figur (Pose je Schritt, PosePlayer-Vorschau) lassen sich vor dem Speichern ändern. Dieselbe Bearbeitung steht danach unter „Felder und Figur anpassen“ (`/catalog/[id]/edit`). YouTube bleibt Click-to-Play, Instagram outbound; es gibt keine Pose-Estimation aus dem Video.
+
+Derselbe Link (normalisiert, z. B. youtu.be und watch?v=) wird in der lokalen bzw. Cloud-Sammlung erkannt – eigene Übungen und Katalog-Einträge mit Source-URL. Die App zeigt „Dieser Link ist schon in der Sammlung“, öffnet den vorhandenen Eintrag zum Anpassen und legt keine stille zweite Kopie an.
+
+Ohne Link: Sammlung „Selbst anlegen“ und auf der Import-Seite „Ohne Link anlegen“. Eigene Übungen sind `is_system` false und haben keine Source-URL.

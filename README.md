@@ -20,7 +20,7 @@ Die kostenlosen Pläne (Vercel Hobby, Supabase Free) reichen für den Start.
 - **Sammlung** mit hierarchischen Kategorien (Eltern/Kinder) und mehreren Tags pro Übung
 - **Katalog + eigene Übungen**: Bewegung, Atem, Mantras, Achtsamkeit
 - **Erklärung** als Text plus einheitliche Gliederpuppe (männlich, mit Gelenken); Schritte aneinandergereiht wirken wie ein kurzes Video
-- **Import** von YouTube- oder Instagram-Links: Titel und Beschreibung werden gelesen, eine oder mehrere Übungen vorgeschlagen und als Gliederpuppe neu gezeichnet
+- **Import** von YouTube- oder Instagram-Links: Vorschlag als bearbeitbare Felder und Figur; gleicher Link wird erkannt; eigene Übung auch ohne Link
 - **Übungsplan** mit Rhythmus und optionalem Zeitraum; mehrere Pläne, Versand an eine E-Mail (Annehmen in der App)
 - **Beschwerden** mit passenden Übungsvorschlägen
 - **Heute-Ansicht** mit Serie, ohne Schuldgefühl beim Auslassen
@@ -103,7 +103,7 @@ Wenn du zuerst lokal geübt hast und dich später anmeldest, kannst du den Dexie
 
 ## Hinweis zum Import
 
-YouTube und Instagram liefern Metadaten, keine vollständige Videoanalyse. Die App zeigt nur die eigene Figur. Prüfe Vorschläge vor dem Speichern.
+YouTube und Instagram liefern Metadaten, keine vollständige Videoanalyse. Die App zeigt nur die eigene Figur. Nach dem Ableiten kannst du Titel, Schritte und die Figur bearbeiten und speichern. Derselbe Link wird erkannt (vorhandene Übung anpassen, keine stille Kopie). Eigene Übungen gehen auch ohne Link („Selbst anlegen“ / „Ohne Link anlegen“).
 
 ## Originalvideo und „Mitlesen“ beim Import
 

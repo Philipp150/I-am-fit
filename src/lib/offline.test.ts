@@ -45,6 +45,7 @@ describe("offline navigation fallback", () => {
   it("reuses any cached practice page for another exercise id", () => {
     expect(isPracticePath("/practice/ex-neck-circles")).toBe(true);
     expect(isCatalogExercisePath("/catalog/ex-box-breath")).toBe(true);
+    expect(isCatalogExercisePath("/catalog/ex-box-breath/edit")).toBe(true);
     expect(isCatalogExercisePath("/catalog/new")).toBe(false);
     expect(isCatalogExercisePath("/catalog/import")).toBe(false);
     expect(

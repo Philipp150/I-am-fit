@@ -119,3 +119,11 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 ## Client-Exception (Live)
 
 - [x] Next.js-Fehlerseite (`SchemaError` durch Dexie `orderBy("title")` ohne Index) behoben: Übungen lokal per `toArray` + Sort, Live-Queries fangen Dexie-Fehler; Cloud-Banner bleibt nicht-blockierend
+
+## Import: Felder, Figur, Duplikate, ohne Link
+
+- [x] Nach dem Ableiten eines Links sind Titel, Kurztext, Schritte, Dauer, Kategorien und Beschwerden bearbeitbar (kein totes Vorschau-Card)
+- [x] Anzeige der Gliederpuppe im Import und in der Übung anpassbar (PosePlayer + Pose-Auswahl pro Schritt); keine Pixel-Pose-Estimation aus dem Video
+- [x] Gleicher Link (eigene Übung oder Katalog-Source-URL) wird erkannt: Hinweis „schon in der Sammlung“, vorhandene Übung öffnen/anpassen, keine stille zweite Kopie
+- [x] Eigene Übung ohne Link anlegen (Sammlung „Selbst anlegen“, Import „Ohne Link anlegen“); `is_system` false, ohne Source-URL
+- [x] Nach dem Speichern: „Felder und Figur anpassen“ auf der Übungsseite (`/catalog/[id]/edit`)

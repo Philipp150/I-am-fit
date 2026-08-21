@@ -55,8 +55,12 @@ export function isNetworkOnlyMediaUrl(url: string, destination = ""): boolean {
 export function isCatalogExercisePath(pathname: string): boolean {
   if (!pathname.startsWith("/catalog/")) return false;
   const rest = pathname.slice("/catalog/".length);
-  if (!rest || rest.includes("/")) return false;
-  return rest !== "new" && rest !== "import";
+  if (!rest) return false;
+  const segments = rest.split("/").filter(Boolean);
+  const id = segments[0];
+  if (!id || id === "new" || id === "import") return false;
+  if (segments.length === 1) return true;
+  return segments.length === 2 && segments[1] === "edit";
 }
 
 export function isPracticePath(pathname: string): boolean {

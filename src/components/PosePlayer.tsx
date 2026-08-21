@@ -22,8 +22,9 @@ export function PosePlayer({ steps, autoPlay = true, loop = true, className, onF
   const [finished, setFinished] = useState(false);
   const [blend, setBlend] = useState(1);
 
-  const current = safeSteps[index];
-  const previous = safeSteps[(index - 1 + safeSteps.length) % safeSteps.length];
+  const safeIndex = Math.min(Math.max(0, index), safeSteps.length - 1);
+  const current = safeSteps[safeIndex];
+  const previous = safeSteps[(safeIndex - 1 + safeSteps.length) % safeSteps.length];
   const pose = useMemo(
     () => lerpPose(POSES[previous.pose] ?? POSES.stand, POSES[current.pose] ?? POSES.stand, blend),
     [previous.pose, current.pose, blend],

@@ -96,6 +96,12 @@ export default function ExerciseDetailPage() {
         <Link href={`/practice/${exercise.id}`} className="rounded-full bg-clay py-3 text-center text-sm text-cream">
           Jetzt anleiten lassen
         </Link>
+        <Link
+          href={`/catalog/${exercise.id}/edit`}
+          className="rounded-full border border-forest/30 bg-white/50 py-3 text-center text-sm font-medium text-forest-dark"
+        >
+          Felder und Figur anpassen
+        </Link>
         <PrimaryButton onClick={addToPlan} disabled={receivedActive}>
           {receivedActive
             ? "Aktiver Plan ist empfangen (nur lesen)"
