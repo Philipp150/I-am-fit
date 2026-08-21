@@ -1,4 +1,4 @@
-import type { Completion, Exercise, PlanItem, Profile } from "./types";
+import type { Completion, Exercise, PlanInvite, PlanItem, PlanSnapshot, Profile, TrainingPlan } from "./types";
 
 export type ExerciseRow = {
   id: string;
@@ -20,6 +20,7 @@ export type ExerciseRow = {
 
 export type PlanRow = {
   id: string;
+  plan_id: string | null;
   exercise_id: string;
   enabled: boolean;
   rhythm: PlanItem["rhythm"];
@@ -27,6 +28,32 @@ export type PlanRow = {
   reps: number | null;
   reminder_time: string | null;
   keep_until: string | null;
+  created_at: string;
+};
+
+export type TrainingPlanRow = {
+  id: string;
+  owner_id: string;
+  title: string;
+  created_by_id: string | null;
+  created_by_name: string;
+  created_by_email: string;
+  source: TrainingPlan["source"];
+  accepted_from_invite_id: string | null;
+  archived: boolean;
+  created_at: string;
+};
+
+export type PlanInviteRow = {
+  id: string;
+  from_user_id: string;
+  from_name: string;
+  from_email: string;
+  to_email: string;
+  to_user_id: string | null;
+  source_plan_id: string | null;
+  plan_snapshot: PlanSnapshot;
+  status: PlanInvite["status"];
   created_at: string;
 };
 
@@ -44,6 +71,7 @@ export type ProfileRow = {
   display_name: string;
   reminder_enabled: boolean;
   reminder_time: string;
+  active_plan_id: string | null;
   created_at: string;
 };
 
@@ -89,6 +117,7 @@ export function exerciseToRow(exercise: Exercise, ownerId: string | null): Exerc
 export function planFromRow(row: PlanRow): PlanItem {
   return {
     id: row.id,
+    planId: row.plan_id ?? "",
     exerciseId: row.exercise_id,
     enabled: row.enabled,
     rhythm: row.rhythm,
@@ -104,6 +133,7 @@ export function planToRow(item: PlanItem, ownerId: string) {
   return {
     id: item.id,
     owner_id: ownerId,
+    plan_id: item.planId,
     exercise_id: item.exerciseId,
     enabled: item.enabled,
     rhythm: item.rhythm,
@@ -112,6 +142,65 @@ export function planToRow(item: PlanItem, ownerId: string) {
     reminder_time: item.reminderTime ?? null,
     keep_until: item.keepUntil ?? null,
     created_at: item.createdAt,
+  };
+}
+
+export function trainingPlanFromRow(row: TrainingPlanRow): TrainingPlan {
+  return {
+    id: row.id,
+    title: row.title,
+    createdById: row.created_by_id ?? "",
+    createdByName: row.created_by_name ?? "",
+    createdByEmail: row.created_by_email ?? "",
+    source: row.source === "received" ? "received" : "self",
+    acceptedFromInviteId: row.accepted_from_invite_id,
+    archived: Boolean(row.archived),
+    createdAt: row.created_at,
+  };
+}
+
+export function trainingPlanToRow(plan: TrainingPlan, ownerId: string) {
+  return {
+    id: plan.id,
+    owner_id: ownerId,
+    title: plan.title,
+    created_by_id: plan.createdById || ownerId,
+    created_by_name: plan.createdByName,
+    created_by_email: plan.createdByEmail,
+    source: plan.source,
+    accepted_from_invite_id: plan.acceptedFromInviteId,
+    archived: plan.archived,
+    created_at: plan.createdAt,
+  };
+}
+
+export function planInviteFromRow(row: PlanInviteRow): PlanInvite {
+  return {
+    id: row.id,
+    fromUserId: row.from_user_id,
+    fromName: row.from_name ?? "",
+    fromEmail: row.from_email ?? "",
+    toEmail: row.to_email,
+    toUserId: row.to_user_id,
+    sourcePlanId: row.source_plan_id,
+    planSnapshot: row.plan_snapshot,
+    status: row.status,
+    createdAt: row.created_at,
+  };
+}
+
+export function planInviteToRow(invite: PlanInvite): PlanInviteRow {
+  return {
+    id: invite.id,
+    from_user_id: invite.fromUserId,
+    from_name: invite.fromName,
+    from_email: invite.fromEmail,
+    to_email: invite.toEmail,
+    to_user_id: invite.toUserId,
+    source_plan_id: invite.sourcePlanId,
+    plan_snapshot: invite.planSnapshot,
+    status: invite.status,
+    created_at: invite.createdAt,
   };
 }
 
@@ -132,6 +221,7 @@ export function profileFromRow(row: ProfileRow): Profile {
     displayName: row.display_name,
     reminderEnabled: row.reminder_enabled,
     reminderTime: row.reminder_time,
+    activePlanId: row.active_plan_id ?? null,
     createdAt: row.created_at,
   };
 }

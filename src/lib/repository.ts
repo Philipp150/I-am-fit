@@ -5,16 +5,30 @@ import {
   exerciseFromRow,
   exerciseToRow,
   planFromRow,
+  planInviteFromRow,
+  planInviteToRow,
   planToRow,
   profileFromRow,
+  trainingPlanFromRow,
+  trainingPlanToRow,
   type CompletionRow,
   type ExerciseRow,
+  type PlanInviteRow,
   type PlanRow,
   type ProfileRow,
+  type TrainingPlanRow,
 } from "./mappers";
 import { notifyData } from "./notify";
+import {
+  acceptInviteToNewPlan,
+  defaultPersonalPlan,
+  isValidEmail,
+  LOCAL_DEFAULT_PLAN_ID,
+  normalizeEmail,
+  snapshotFromPlan,
+} from "./plan-share";
 import { createBrowserSupabase } from "./supabase/client";
-import type { Category, Complaint, Completion, Exercise, PlanItem, Profile } from "./types";
+import type { Category, Complaint, Completion, Exercise, PlanInvite, PlanItem, Profile, TrainingPlan } from "./types";
 
 export { newId };
 
@@ -38,6 +52,11 @@ type ComplaintRow = {
 
 function throwIfError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
+}
+
+function safeNextPath(path: string): string {
+  if (!path.startsWith("/") || path.startsWith("//")) return "/";
+  return path;
 }
 
 export async function currentUser(): Promise<SessionUser | null> {
@@ -121,7 +140,148 @@ export async function deleteExercise(id: string): Promise<void> {
   notifyData();
 }
 
-export async function listPlanItems(): Promise<PlanItem[]> {
+export async function listPlans(): Promise<TrainingPlan[]> {
+  if (!isCloudEnabled()) {
+    await ensureSeeded();
+    const plans = await getDb().plans.toArray();
+    return plans.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+  const user = await currentUser();
+  if (!user) return [];
+  const { data, error } = await createBrowserSupabase().from("plans").select("*").order("created_at", { ascending: false });
+  throwIfError(error);
+  return ((data ?? []) as TrainingPlanRow[]).map(trainingPlanFromRow);
+}
+
+export async function getPlan(id: string): Promise<TrainingPlan | undefined> {
+  if (!isCloudEnabled()) return getDb().plans.get(id);
+  const user = await currentUser();
+  if (!user) return undefined;
+  const { data, error } = await createBrowserSupabase().from("plans").select("*").eq("id", id).maybeSingle();
+  throwIfError(error);
+  return data ? trainingPlanFromRow(data as TrainingPlanRow) : undefined;
+}
+
+export async function savePlan(plan: TrainingPlan): Promise<void> {
+  if (!isCloudEnabled()) {
+    await getDb().plans.put(plan);
+    notifyData();
+    return;
+  }
+  const user = await currentUser();
+  if (!user) throw new Error("Bitte zuerst anmelden, um Pläne zu speichern.");
+  const { error } = await createBrowserSupabase().from("plans").upsert(trainingPlanToRow(plan, user.id));
+  throwIfError(error);
+  notifyData();
+}
+
+async function creatorFields(user: SessionUser): Promise<{ createdById: string; createdByName: string; createdByEmail: string }> {
+  const profile = await getProfile();
+  return {
+    createdById: user.id,
+    createdByName: profile?.displayName?.trim() || "",
+    createdByEmail: user.email ?? "",
+  };
+}
+
+export async function createPlan(title: string, activate = false): Promise<TrainingPlan> {
+  const user = await currentUser();
+  if (isCloudEnabled() && !user) throw new Error("Bitte zuerst anmelden, um einen Plan anzulegen.");
+  const creator = user ? await creatorFields(user) : { createdById: "solo", createdByName: "", createdByEmail: "" };
+  const plan: TrainingPlan = {
+    id: newId("plan"),
+    title: title.trim() || "Neuer Plan",
+    ...creator,
+    source: "self",
+    acceptedFromInviteId: null,
+    archived: false,
+    createdAt: new Date().toISOString(),
+  };
+  await savePlan(plan);
+  if (activate) await setActivePlan(plan.id);
+  else {
+    const profile = await getProfile();
+    if (!profile?.activePlanId) await setActivePlan(plan.id);
+  }
+  return plan;
+}
+
+export async function archivePlan(id: string): Promise<void> {
+  const plan = await getPlan(id);
+  if (!plan) return;
+  await savePlan({ ...plan, archived: true });
+  const profile = await getProfile();
+  if (profile?.activePlanId === id) {
+    const next = (await listPlans()).find((item) => item.id !== id && !item.archived);
+    await setActivePlan(next?.id ?? null);
+  }
+}
+
+export async function deletePlan(id: string): Promise<void> {
+  if (!isCloudEnabled()) {
+    const db = getDb();
+    const related = await db.planItems.where("planId").equals(id).toArray();
+    await db.planItems.bulkDelete(related.map((item) => item.id));
+    await db.plans.delete(id);
+    const profile = await db.profile.get("solo");
+    if (profile?.activePlanId === id) {
+      const next = (await db.plans.toArray()).find((item) => !item.archived);
+      await db.profile.put({ ...profile, activePlanId: next?.id ?? null });
+    }
+    notifyData();
+    return;
+  }
+  const profile = await getProfile();
+  const { error } = await createBrowserSupabase().from("plans").delete().eq("id", id);
+  throwIfError(error);
+  if (profile?.activePlanId === id) {
+    const next = (await listPlans()).find((item) => item.id !== id && !item.archived);
+    await setActivePlan(next?.id ?? null);
+  } else {
+    notifyData();
+  }
+}
+
+export async function setActivePlan(planId: string | null): Promise<void> {
+  const user = await currentUser();
+  const existing = await getProfile();
+  const profile: Profile = existing ?? {
+    id: user?.id ?? "solo",
+    displayName: "",
+    reminderEnabled: true,
+    reminderTime: "08:30",
+    activePlanId: planId,
+    createdAt: new Date().toISOString(),
+  };
+  await saveProfile({ ...profile, activePlanId: planId });
+}
+
+export async function ensureActivePlan(): Promise<TrainingPlan> {
+  const user = await currentUser();
+  if (isCloudEnabled() && !user) {
+    throw new Error("Bitte zuerst anmelden, um einen Plan zu nutzen.");
+  }
+  const plans = await listPlans();
+  const profile = await getProfile();
+  const active = plans.find((plan) => plan.id === profile?.activePlanId && !plan.archived);
+  if (active) return active;
+  const fallback = plans.find((plan) => !plan.archived);
+  if (fallback) {
+    await setActivePlan(fallback.id);
+    return fallback;
+  }
+  const ownerId = user?.id ?? "solo";
+  const creator = user ? await creatorFields(user) : { createdById: "solo", createdByName: "", createdByEmail: "" };
+  const created: TrainingPlan = {
+    ...defaultPersonalPlan(ownerId, new Date().toISOString(), creator.createdByName, creator.createdByEmail),
+    id: ownerId === "solo" ? LOCAL_DEFAULT_PLAN_ID : newId("plan"),
+  };
+  await savePlan(created);
+  await setActivePlan(created.id);
+  return created;
+}
+
+export async function listAllPlanItems(): Promise<PlanItem[]> {
   if (!isCloudEnabled()) return getDb().planItems.toArray();
   const user = await currentUser();
   if (!user) return [];
@@ -130,7 +290,34 @@ export async function listPlanItems(): Promise<PlanItem[]> {
   return ((data ?? []) as PlanRow[]).map(planFromRow);
 }
 
+export async function listPlanItemsForPlan(planId: string): Promise<PlanItem[]> {
+  if (!isCloudEnabled()) return getDb().planItems.where("planId").equals(planId).toArray();
+  const user = await currentUser();
+  if (!user) return [];
+  const { data, error } = await createBrowserSupabase()
+    .from("plan_items")
+    .select("*")
+    .eq("plan_id", planId)
+    .order("created_at");
+  throwIfError(error);
+  return ((data ?? []) as PlanRow[]).map(planFromRow);
+}
+
+export async function listActivePlanItems(): Promise<PlanItem[]> {
+  try {
+    const plan = await ensureActivePlan();
+    return listPlanItemsForPlan(plan.id);
+  } catch {
+    return [];
+  }
+}
+
+export async function listPlanItems(): Promise<PlanItem[]> {
+  return listAllPlanItems();
+}
+
 export async function savePlanItem(item: PlanItem): Promise<void> {
+  if (!item.planId) throw new Error("Plan-Eintrag braucht einen Plan.");
   if (!isCloudEnabled()) {
     await getDb().planItems.put(item);
     notifyData();
@@ -209,19 +396,157 @@ export async function saveProfile(profile: Profile): Promise<void> {
     display_name: profile.displayName,
     reminder_enabled: profile.reminderEnabled,
     reminder_time: profile.reminderTime,
+    active_plan_id: profile.activePlanId,
     created_at: profile.createdAt,
   });
   throwIfError(error);
   notifyData();
 }
 
-export async function requestMagicLink(email: string): Promise<void> {
+export async function listPendingInvites(): Promise<PlanInvite[]> {
+  if (!isCloudEnabled()) return [];
+  const user = await currentUser();
+  if (!user?.email) return [];
+  const email = normalizeEmail(user.email);
+  const { data, error } = await createBrowserSupabase()
+    .from("plan_invites")
+    .select("*")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  throwIfError(error);
+  return ((data ?? []) as PlanInviteRow[])
+    .map(planInviteFromRow)
+    .filter((invite) => invite.fromUserId !== user.id)
+    .filter((invite) => invite.toUserId === user.id || normalizeEmail(invite.toEmail) === email);
+}
+
+export async function sendPlanInvite(planId: string, toEmail: string): Promise<{ inviteId: string; magicLinkSent: boolean }> {
+  if (!isCloudEnabled()) {
+    throw new Error("Zum Senden per E-Mail braucht es ein Supabase-Konto.");
+  }
+  const user = await currentUser();
+  if (!user || user.id === "solo") {
+    throw new Error("Bitte zuerst anmelden, um einen Plan zu senden.");
+  }
+  const email = normalizeEmail(toEmail);
+  if (!isValidEmail(email)) {
+    throw new Error("Bitte eine gültige E-Mail-Adresse angeben.");
+  }
+  if (user.email && normalizeEmail(user.email) === email) {
+    throw new Error("Das ist deine eigene Adresse. Eine andere Person eintragen.");
+  }
+  const plan = await getPlan(planId);
+  if (!plan) throw new Error("Plan nicht gefunden.");
+  const [items, exercises, profile] = await Promise.all([listPlanItemsForPlan(planId), listExercises(), getProfile()]);
+  const snapshot = snapshotFromPlan(plan, items, exercises);
+  const fromName = profile?.displayName?.trim() || "";
+  const fromEmail = user.email ?? "";
+  const supabase = createBrowserSupabase();
+  const { data: existing, error: existingError } = await supabase
+    .from("plan_invites")
+    .select("id")
+    .eq("from_user_id", user.id)
+    .eq("to_email", email)
+    .eq("source_plan_id", planId)
+    .eq("status", "pending")
+    .maybeSingle();
+  throwIfError(existingError);
+  const invite: PlanInvite = {
+    id: (existing?.id as string | undefined) ?? newId("invite"),
+    fromUserId: user.id,
+    fromName,
+    fromEmail,
+    toEmail: email,
+    toUserId: null,
+    sourcePlanId: planId,
+    planSnapshot: snapshot,
+    status: "pending",
+    createdAt: new Date().toISOString(),
+  };
+  const { error } = await supabase.from("plan_invites").upsert(planInviteToRow(invite));
+  throwIfError(error);
+  let magicLinkSent = false;
+  try {
+    await requestMagicLink(email, "/plan");
+    magicLinkSent = true;
+  } catch {
+    magicLinkSent = false;
+  }
+  notifyData();
+  return { inviteId: invite.id, magicLinkSent };
+}
+
+export async function acceptPlanInvite(inviteId: string): Promise<TrainingPlan> {
+  if (!isCloudEnabled()) {
+    throw new Error("Einladungen gibt es nur mit einem Supabase-Konto.");
+  }
+  const user = await currentUser();
+  if (!user) throw new Error("Bitte zuerst anmelden, um eine Einladung anzunehmen.");
+  const supabase = createBrowserSupabase();
+  const { data, error } = await supabase.from("plan_invites").select("*").eq("id", inviteId).maybeSingle();
+  throwIfError(error);
+  if (!data) throw new Error("Einladung nicht gefunden.");
+  const invite = planInviteFromRow(data as PlanInviteRow);
+  const plans = await listPlans();
+  const already = plans.find((plan) => plan.acceptedFromInviteId === invite.id);
+  if (already) {
+    if (invite.status === "pending") {
+      const { error: statusError } = await supabase
+        .from("plan_invites")
+        .update({ status: "accepted", to_user_id: user.id })
+        .eq("id", invite.id);
+      throwIfError(statusError);
+      notifyData();
+    }
+    return already;
+  }
+  if (invite.status === "declined") {
+    throw new Error("Diese Einladung wurde schon abgelehnt.");
+  }
+  const exercises = await listExercises();
+  const result = acceptInviteToNewPlan({
+    invite,
+    recipientId: user.id,
+    existingPlanIds: plans.map((plan) => plan.id),
+    existingExerciseIds: exercises.map((exercise) => exercise.id),
+    now: new Date().toISOString(),
+    createId: newId,
+  });
+  for (const exercise of result.exercisesToSave) {
+    await saveExercise(exercise);
+  }
+  await savePlan(result.plan);
+  for (const item of result.items) {
+    await savePlanItem(item);
+  }
+  const { error: statusError } = await supabase
+    .from("plan_invites")
+    .update({ status: "accepted", to_user_id: user.id })
+    .eq("id", invite.id);
+  throwIfError(statusError);
+  notifyData();
+  return result.plan;
+}
+
+export async function declinePlanInvite(inviteId: string): Promise<void> {
+  if (!isCloudEnabled()) return;
+  const user = await currentUser();
+  if (!user) throw new Error("Bitte zuerst anmelden.");
+  const { error } = await createBrowserSupabase()
+    .from("plan_invites")
+    .update({ status: "declined", to_user_id: user.id })
+    .eq("id", inviteId);
+  throwIfError(error);
+  notifyData();
+}
+
+export async function requestMagicLink(email: string, nextPath = "/"): Promise<void> {
   const supabase = createBrowserSupabase();
   const origin = typeof window !== "undefined" ? window.location.origin : siteOrigin();
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${origin}/auth/callback`,
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeNextPath(nextPath))}`,
     },
   });
   throwIfError(error);

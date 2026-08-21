@@ -1,10 +1,12 @@
 import { getDb } from "./db";
 import { isCloudEnabled } from "./env";
-import { addCompletion, currentUser, getProfile, saveExercise, savePlanItem, saveProfile } from "./repository";
-import type { Completion, Exercise, PlanItem, Profile } from "./types";
+import { addCompletion, currentUser, getProfile, saveExercise, savePlan, savePlanItem, saveProfile } from "./repository";
+import { defaultPersonalPlan, LOCAL_DEFAULT_PLAN_ID } from "./plan-share";
+import type { Completion, Exercise, PlanItem, Profile, TrainingPlan } from "./types";
 
 export type LocalUserState = {
   exercises: Exercise[];
+  plans: TrainingPlan[];
   planItems: PlanItem[];
   completions: Completion[];
   profile?: Profile;
@@ -19,15 +21,21 @@ export type LocalStateSummary = {
 
 export async function readLocalUserState(): Promise<LocalUserState> {
   const db = getDb();
-  const [exercises, planItems, completions, profile] = await Promise.all([
+  const [exercises, plans, planItems, completions, profile] = await Promise.all([
     db.exercises.toArray(),
+    db.plans.toArray(),
     db.planItems.toArray(),
     db.completions.toArray(),
     db.profile.get("solo"),
   ]);
+  const namedPlans =
+    plans.length > 0
+      ? plans
+      : [defaultPersonalPlan("solo", profile?.createdAt ?? new Date().toISOString(), profile?.displayName ?? "")];
   return {
     exercises: exercises.filter((exercise) => !exercise.isSystem),
-    planItems,
+    plans: namedPlans,
+    planItems: planItems.map((item) => ({ ...item, planId: item.planId || namedPlans[0]?.id || LOCAL_DEFAULT_PLAN_ID })),
     completions,
     profile,
   };
@@ -55,6 +63,13 @@ export async function migrateLocalToCloud(): Promise<LocalStateSummary> {
   for (const exercise of local.exercises) {
     await saveExercise({ ...exercise, isSystem: false });
   }
+  for (const plan of local.plans) {
+    await savePlan({
+      ...plan,
+      createdById: plan.createdById === "solo" ? user.id : plan.createdById,
+      createdByEmail: plan.createdByEmail || user.email || "",
+    });
+  }
   for (const item of local.planItems) {
     await savePlanItem(item);
   }
@@ -72,6 +87,7 @@ export async function migrateLocalToCloud(): Promise<LocalStateSummary> {
       displayName: existing?.displayName || local.profile.displayName,
       reminderEnabled: existing?.reminderEnabled ?? local.profile.reminderEnabled,
       reminderTime: existing?.reminderTime || local.profile.reminderTime,
+      activePlanId: existing?.activePlanId ?? local.profile.activePlanId ?? local.plans[0]?.id ?? null,
       createdAt: existing?.createdAt ?? local.profile.createdAt,
     });
   }

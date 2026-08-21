@@ -1,5 +1,5 @@
 import { addDays, isoDate, isPlanItemDueOn } from "./schedule";
-import { newId, listPlanItems, savePlanItem, addCompletion } from "./repository";
+import { newId, listPlanItemsForPlan, savePlanItem, addCompletion, ensureActivePlan, getPlan } from "./repository";
 import type { Completion, Exercise, PlanItem, RhythmKind } from "./types";
 
 export function todayOverview(planItems: PlanItem[], completions: Completion[], date: Date) {
@@ -22,9 +22,14 @@ export function todayOverview(planItems: PlanItem[], completions: Completion[], 
 
 export async function addExerciseToPlan(
   exercise: Exercise,
-  overrides?: Partial<Pick<PlanItem, "rhythm" | "durationSec" | "keepUntil">>,
+  overrides?: Partial<Pick<PlanItem, "rhythm" | "durationSec" | "keepUntil" | "planId">>,
 ): Promise<string> {
-  const existing = (await listPlanItems()).find((item) => item.exerciseId === exercise.id);
+  const planId = overrides?.planId ?? (await ensureActivePlan()).id;
+  const plan = await getPlan(planId);
+  if (plan?.source === "received") {
+    throw new Error("Empfangene Pläne bleiben wie geschickt. Aktiviere einen eigenen Plan, um Übungen hinzuzufügen.");
+  }
+  const existing = (await listPlanItemsForPlan(planId)).find((item) => item.exerciseId === exercise.id);
   const keepUntil =
     overrides?.keepUntil !== undefined
       ? overrides.keepUntil
@@ -48,9 +53,10 @@ export async function addExerciseToPlan(
     });
     return existing.id;
   }
-  const id = newId("plan");
+  const id = newId("planitem");
   await savePlanItem({
     id,
+    planId,
     exerciseId: exercise.id,
     enabled: true,
     rhythm,

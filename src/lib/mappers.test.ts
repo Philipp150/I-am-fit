@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { exerciseFromRow, exerciseToRow } from "./mappers";
-import type { Exercise } from "./types";
+import { exerciseFromRow, exerciseToRow, planFromRow, planToRow, trainingPlanFromRow, trainingPlanToRow } from "./mappers";
+import type { Exercise, PlanItem, TrainingPlan } from "./types";
 
 const sample: Exercise = {
   id: "ex-1",
@@ -11,7 +11,7 @@ const sample: Exercise = {
   complaintIds: ["comp-focus"],
   steps: [{ pose: "heart", text: "Sag den Satz.", durationSec: 8 }],
   defaultDurationSec: 60,
-  suggestedRhythm: { kind: "daily", recommendedWeeks: null, note: "Täglich." },
+  suggestedRhythm: { kind: "daily", recommendedWeeks: null, note: "" },
   source: { type: "user" },
   isSystem: false,
   createdAt: "2026-01-01T00:00:00.000Z",
@@ -31,5 +31,36 @@ describe("supabase mappers", () => {
     const row = exerciseToRow({ ...sample, isSystem: true }, "user-1");
     expect(row.owner_id).toBeNull();
     expect(row.is_system).toBe(true);
+  });
+
+  it("round-trips a named plan and its items", () => {
+    const plan: TrainingPlan = {
+      id: "plan-1",
+      title: "Nacken",
+      createdById: "physio-1",
+      createdByName: "Alex",
+      createdByEmail: "alex@praxis.test",
+      source: "received",
+      acceptedFromInviteId: "invite-1",
+      archived: false,
+      createdAt: "2026-08-01T00:00:00.000Z",
+    };
+    const row = trainingPlanToRow(plan, "patient-1");
+    expect(row.owner_id).toBe("patient-1");
+    expect(row.created_by_id).toBe("physio-1");
+    expect(trainingPlanFromRow(row).source).toBe("received");
+    expect(trainingPlanFromRow(row).createdByName).toBe("Alex");
+
+    const item: PlanItem = {
+      id: "item-1",
+      planId: "plan-1",
+      exerciseId: "ex-1",
+      enabled: true,
+      rhythm: { kind: "daily", startDate: "2026-08-01" },
+      createdAt: "2026-08-01T00:00:00.000Z",
+    };
+    const itemRow = planToRow(item, "patient-1");
+    expect(itemRow.plan_id).toBe("plan-1");
+    expect(planFromRow(itemRow).planId).toBe("plan-1");
   });
 });

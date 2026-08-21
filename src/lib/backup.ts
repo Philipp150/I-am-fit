@@ -1,15 +1,28 @@
-import { addCompletion, getProfile, listCompletions, listExercises, listPlanItems, saveExercise, savePlanItem, saveProfile } from "./repository";
-import type { Completion, Exercise, PlanItem, Profile } from "./types";
+import {
+  addCompletion,
+  getProfile,
+  listAllPlanItems,
+  listCompletions,
+  listExercises,
+  listPlans,
+  saveExercise,
+  savePlan,
+  savePlanItem,
+  saveProfile,
+} from "./repository";
+import { defaultPersonalPlan, LOCAL_DEFAULT_PLAN_ID } from "./plan-share";
+import type { Completion, Exercise, PlanItem, Profile, TrainingPlan } from "./types";
 
-export const BACKUP_VERSION = 1 as const;
+export const BACKUP_VERSION = 2 as const;
 
 export type AppBackup = {
-  version: typeof BACKUP_VERSION;
+  version: 1 | typeof BACKUP_VERSION;
   exportedAt: string;
   exercises: Exercise[];
   planItems: PlanItem[];
   completions: Completion[];
   profile?: Profile;
+  plans?: TrainingPlan[];
 };
 
 export function userExercisesOnly(exercises: Exercise[]): Exercise[] {
@@ -20,12 +33,23 @@ export function backupFilename(date: Date): string {
   return `i-am-fit-backup-${date.toISOString().slice(0, 10)}.json`;
 }
 
+function wrapLegacyItems(planItems: PlanItem[], profile: Profile | undefined): { plans: TrainingPlan[]; planItems: PlanItem[] } {
+  const plans: TrainingPlan[] = [
+    defaultPersonalPlan(profile?.id ?? "solo", profile?.createdAt ?? new Date().toISOString(), profile?.displayName ?? ""),
+  ];
+  return {
+    plans,
+    planItems: planItems.map((item) => ({ ...item, planId: item.planId || LOCAL_DEFAULT_PLAN_ID })),
+  };
+}
+
 export function buildBackup(
   exercises: Exercise[],
   planItems: PlanItem[],
   completions: Completion[],
   profile: Profile | undefined,
   exportedAt = new Date().toISOString(),
+  plans: TrainingPlan[] = [],
 ): AppBackup {
   return {
     version: BACKUP_VERSION,
@@ -34,6 +58,7 @@ export function buildBackup(
     planItems,
     completions,
     profile,
+    plans,
   };
 }
 
@@ -48,30 +73,38 @@ export function parseBackup(raw: string): AppBackup {
     throw new Error("Das Backup hat ein unerwartetes Format.");
   }
   const obj = data as Record<string, unknown>;
-  if (obj.version !== BACKUP_VERSION) {
+  if (obj.version !== 1 && obj.version !== BACKUP_VERSION) {
     throw new Error("Diese Backup-Version wird nicht unterstützt.");
   }
   if (!Array.isArray(obj.exercises) || !Array.isArray(obj.planItems) || !Array.isArray(obj.completions)) {
     throw new Error("Im Backup fehlen Plan, eigene Übungen oder Verlauf.");
   }
+  const planItems = obj.planItems as PlanItem[];
+  const profile = obj.profile as Profile | undefined;
+  const plans = Array.isArray(obj.plans) ? (obj.plans as TrainingPlan[]) : undefined;
+  const wrapped = plans && plans.length > 0 ? { plans, planItems } : wrapLegacyItems(planItems, profile);
   return {
-    version: BACKUP_VERSION,
+    version: obj.version === 1 ? 1 : BACKUP_VERSION,
     exportedAt: typeof obj.exportedAt === "string" ? obj.exportedAt : new Date().toISOString(),
     exercises: obj.exercises as Exercise[],
-    planItems: obj.planItems as PlanItem[],
+    planItems: wrapped.planItems,
     completions: obj.completions as Completion[],
-    profile: obj.profile as Profile | undefined,
+    profile: profile
+      ? { ...profile, activePlanId: profile.activePlanId ?? wrapped.plans[0]?.id ?? LOCAL_DEFAULT_PLAN_ID }
+      : undefined,
+    plans: wrapped.plans,
   };
 }
 
 export async function exportCurrentBackup(): Promise<AppBackup> {
-  const [exercises, planItems, completions, profile] = await Promise.all([
+  const [exercises, planItems, completions, profile, plans] = await Promise.all([
     listExercises(),
-    listPlanItems(),
+    listAllPlanItems(),
     listCompletions(),
     getProfile(),
+    listPlans(),
   ]);
-  return buildBackup(exercises, planItems, completions, profile);
+  return buildBackup(exercises, planItems, completions, profile, undefined, plans);
 }
 
 export async function restoreBackup(backup: AppBackup): Promise<{ exercises: number; planItems: number; completions: number }> {
@@ -79,8 +112,12 @@ export async function restoreBackup(backup: AppBackup): Promise<{ exercises: num
   for (const exercise of exercises) {
     await saveExercise({ ...exercise, isSystem: false });
   }
+  const plans = backup.plans && backup.plans.length > 0 ? backup.plans : wrapLegacyItems(backup.planItems, backup.profile).plans;
+  for (const plan of plans) {
+    await savePlan(plan);
+  }
   for (const item of backup.planItems) {
-    await savePlanItem(item);
+    await savePlanItem({ ...item, planId: item.planId || plans[0]?.id || LOCAL_DEFAULT_PLAN_ID });
   }
   for (const completion of backup.completions) {
     try {
@@ -96,6 +133,7 @@ export async function restoreBackup(backup: AppBackup): Promise<{ exercises: num
       displayName: backup.profile.displayName || existing?.displayName || "",
       reminderEnabled: backup.profile.reminderEnabled,
       reminderTime: backup.profile.reminderTime,
+      activePlanId: backup.profile.activePlanId ?? existing?.activePlanId ?? plans[0]?.id ?? null,
       createdAt: existing?.createdAt ?? backup.profile.createdAt,
     });
   }

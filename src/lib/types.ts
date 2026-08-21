@@ -97,8 +97,23 @@ export type Exercise = {
   updatedAt: string;
 };
 
+export type PlanSource = "self" | "received";
+
+export type TrainingPlan = {
+  id: string;
+  title: string;
+  createdById: string;
+  createdByName: string;
+  createdByEmail: string;
+  source: PlanSource;
+  acceptedFromInviteId: string | null;
+  archived: boolean;
+  createdAt: string;
+};
+
 export type PlanItem = {
   id: string;
+  planId: string;
   exerciseId: string;
   enabled: boolean;
   rhythm: {
@@ -111,6 +126,37 @@ export type PlanItem = {
   reps?: number;
   reminderTime?: string;
   keepUntil?: string | null;
+  createdAt: string;
+};
+
+export type PlanInviteStatus = "pending" | "accepted" | "declined";
+
+export type PlanSnapshotItem = {
+  exerciseId: string;
+  enabled: boolean;
+  rhythm: PlanItem["rhythm"];
+  durationSec?: number;
+  reps?: number;
+  reminderTime?: string;
+  keepUntil?: string | null;
+};
+
+export type PlanSnapshot = {
+  title: string;
+  items: PlanSnapshotItem[];
+  exercises: Exercise[];
+};
+
+export type PlanInvite = {
+  id: string;
+  fromUserId: string;
+  fromName: string;
+  fromEmail: string;
+  toEmail: string;
+  toUserId: string | null;
+  sourcePlanId: string | null;
+  planSnapshot: PlanSnapshot;
+  status: PlanInviteStatus;
   createdAt: string;
 };
 
@@ -128,6 +174,7 @@ export type Profile = {
   displayName: string;
   reminderEnabled: boolean;
   reminderTime: string;
+  activePlanId: string | null;
   createdAt: string;
 };
 

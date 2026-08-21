@@ -703,5 +703,6 @@ export const DEFAULT_PROFILE = {
   displayName: "",
   reminderEnabled: true,
   reminderTime: "08:30",
+  activePlanId: "plan-local-default",
   createdAt: nowIso(),
 };
