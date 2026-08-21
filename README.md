@@ -20,11 +20,11 @@ Die kostenlosen Pläne (Vercel Hobby, Supabase Free) reichen für den Start.
 - **Sammlung** mit hierarchischen Kategorien (Eltern/Kinder) und mehreren Tags pro Übung
 - **Katalog + eigene Übungen**: Bewegung, Atem, Mantras, Achtsamkeit
 - **Erklärung** als Text plus einheitliche Gliederpuppe (männlich, mit Gelenken); Schritte aneinandergereiht wirken wie ein kurzes Video
-- **Import** von YouTube- oder Instagram-Links: Vorschlag als bearbeitbare Felder und Figur; gleicher Link wird erkannt; eigene Übung auch ohne Link
+- **Import** von YouTube- oder Instagram-Links: Vorschlag als bearbeitbare Felder und Figur; gleicher Link wird erkannt; eigene Übung auch ohne Link. Eine **Bewegungsspur** entsteht nur aus einer hochgeladenen Videodatei (oder einer öffentlichen mp4/webm-Datei), nicht aus der YouTube-Einbettung.
 - **Übungsplan** mit Rhythmus und optionalem Zeitraum; mehrere Pläne, Versand an eine E-Mail (Annehmen in der App)
 - **Beschwerden** mit passenden Übungsvorschlägen
 - **Heute-Ansicht** mit Serie, ohne Schuldgefühl beim Auslassen
-- **Originalvideo (zusätzlich)**: YouTube nach Tipp auf „Video ansehen“ (youtube-nocookie); Instagram als Link plus Thumbnail, wenn vorhanden. Die Anleitung mit Schritten und App-Figur bleibt die Hauptansicht.
+- **Originalvideo (zusätzlich)**: YouTube nach Tipp auf „Video ansehen“ (youtube-nocookie); Instagram als Link plus Thumbnail, wenn vorhanden. Die Anleitung mit Schritten und App-Figur bleibt die Hauptansicht. Videos brauchen Internet; die Spur der Figur liegt lokal in IndexedDB.
 
 ## Hosting (ohne lokales npm)
 
@@ -36,7 +36,7 @@ Vercel-Projektname **i-am-super-fit**, weil `i-am-fit` schon vergeben war. Pushe
 ### Supabase (Geräte-Sync)
 
 1. Neues Projekt auf [supabase.com](https://supabase.com) anlegen.
-2. SQL-Editor öffnen und `supabase/setup.sql` vollständig ausführen (Schema + Katalog). Nach Schema-Änderungen (z. B. mehrere Pläne / Einladungen) die Datei erneut ausführen.
+2. SQL-Editor öffnen und `supabase/setup.sql` vollständig ausführen (Schema + Katalog). Nach Schema-Änderungen (z. B. mehrere Pläne / Einladungen / `pose_track`) die Datei erneut ausführen.
 3. Unter **Authentication → URL configuration**:
    - Site URL = `https://i-am-super-fit.vercel.app`
    - Redirect URLs: `https://i-am-super-fit.vercel.app/auth/callback`
@@ -75,7 +75,7 @@ Im mobilen Browser: *Zum Home-Bildschirm* / *Als App installieren*. Die App zeig
 
 Erinnerungen (Uhrzeit unter Verlauf, optional pro Plan-Eintrag) brauchen eine Notification-Erlaubnis. Sie feuern lokal bzw. über den Service Worker, solange die App oder die installierte PWA erreichbar ist.
 
-Offline: nach der Installation (PWA oder Capacitor gegen die Live-URL) bleiben Katalog, Plan, Heute, Beschwerden und die Gliederpuppe ohne Netz nutzbar. Originalvideos (YouTube/Instagram) werden nicht gespeichert und brauchen Internet; die Übung selbst bleibt sichtbar.
+Offline: nach der Installation (PWA oder Capacitor gegen die Live-URL) bleiben Katalog, Plan, Heute, Beschwerden und die Gliederpuppe ohne Netz nutzbar. Eine erkannte Bewegungsspur liegt in IndexedDB. Originalvideos (YouTube/Instagram) werden nicht gespeichert und brauchen Internet; die Übung selbst bleibt sichtbar.
 
 ### Capacitor (Android / iOS)
 

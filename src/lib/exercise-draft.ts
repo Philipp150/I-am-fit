@@ -35,6 +35,7 @@ export function exerciseToDraft(exercise: Exercise): DraftExercise {
     defaultReps: exercise.defaultReps,
     suggestedRhythm: { ...exercise.suggestedRhythm, daysOfWeek: exercise.suggestedRhythm.daysOfWeek?.slice() },
     source: { ...exercise.source },
+    poseTrack: exercise.poseTrack ?? undefined,
     isSystem: false,
   };
 }
@@ -134,6 +135,7 @@ export function createCustomExercise(input: {
   categoryIds?: string[];
   complaintIds?: string[];
   steps?: ExerciseStep[];
+  poseTrack?: Exercise["poseTrack"];
   defaultDurationSec?: number;
   note?: string;
 }): Exercise {
@@ -144,6 +146,7 @@ export function createCustomExercise(input: {
     categoryIds: input.categoryIds ?? ["cat-body"],
     complaintIds: input.complaintIds ?? [],
     steps: input.steps ?? [emptyStep()],
+    poseTrack: input.poseTrack,
     defaultDurationSec: input.defaultDurationSec ?? 90,
     suggestedRhythm: {
       kind: "daily",

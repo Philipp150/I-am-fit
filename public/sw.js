@@ -110,7 +110,7 @@ function shouldBypassCache(url, request) {
   const destination = request.destination || "";
   if (destination === "video" || destination === "media") return true;
   if (url.protocol === "blob:" || url.protocol === "data:") return true;
-  if (/\.(mp4|webm|m4v|mov|m3u8)(\?|$)/i.test(url.pathname)) return true;
+  if (/\.(mp4|webm|m4v|mov|m3u8|wasm|task)(\?|$)/i.test(url.pathname)) return true;
   if (isVideoOrSocialHost(url.hostname)) return true;
   const range = request.headers && request.headers.get("range");
   if (range) return true;

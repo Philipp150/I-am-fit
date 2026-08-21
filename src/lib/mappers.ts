@@ -1,3 +1,4 @@
+import { parsePoseTrack } from "./pose-track";
 import type { Completion, Exercise, PlanInvite, PlanItem, PlanSnapshot, Profile, TrainingPlan } from "./types";
 
 export type ExerciseRow = {
@@ -9,6 +10,7 @@ export type ExerciseRow = {
   category_ids: string[];
   complaint_ids: string[];
   steps: Exercise["steps"];
+  pose_track?: Exercise["poseTrack"] | null;
   default_duration_sec: number;
   default_reps: number | null;
   suggested_rhythm: Exercise["suggestedRhythm"];
@@ -84,6 +86,7 @@ export function exerciseFromRow(row: ExerciseRow): Exercise {
     categoryIds: row.category_ids ?? [],
     complaintIds: row.complaint_ids ?? [],
     steps: row.steps ?? [],
+    poseTrack: parsePoseTrack(row.pose_track) ?? undefined,
     defaultDurationSec: row.default_duration_sec,
     defaultReps: row.default_reps ?? undefined,
     suggestedRhythm: row.suggested_rhythm,
@@ -104,6 +107,7 @@ export function exerciseToRow(exercise: Exercise, ownerId: string | null): Exerc
     category_ids: exercise.categoryIds,
     complaint_ids: exercise.complaintIds,
     steps: exercise.steps,
+    pose_track: parsePoseTrack(exercise.poseTrack) ?? exercise.poseTrack ?? null,
     default_duration_sec: exercise.defaultDurationSec,
     default_reps: exercise.defaultReps ?? null,
     suggested_rhythm: exercise.suggestedRhythm,

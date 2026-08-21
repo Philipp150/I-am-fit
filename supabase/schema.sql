@@ -28,6 +28,7 @@ create table if not exists public.exercises (
   category_ids text[] not null default '{}',
   complaint_ids text[] not null default '{}',
   steps jsonb not null default '[]'::jsonb,
+  pose_track jsonb,
   default_duration_sec integer not null default 60,
   default_reps integer,
   suggested_rhythm jsonb not null default '{}'::jsonb,
@@ -99,6 +100,7 @@ create table if not exists public.profiles (
 -- Existing databases created before named plans: add missing columns.
 alter table public.plan_items add column if not exists plan_id text references public.plans(id) on delete cascade;
 alter table public.profiles add column if not exists active_plan_id text references public.plans(id) on delete set null;
+alter table public.exercises add column if not exists pose_track jsonb;
 
 insert into public.plans (id, owner_id, title, created_by_id, created_by_name, source)
 select

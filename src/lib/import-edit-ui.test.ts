@@ -14,7 +14,9 @@ describe("import and custom-exercise UI", () => {
     expect(page).toContain("Dieser Link ist schon in der Sammlung");
     expect(page).toContain("Ohne Link anlegen");
     expect(page).toContain("Anpassungen speichern");
+    expect(page).toContain("keine Pixel");
     expect(page).not.toContain("ExerciseCard");
+    expect(page).not.toContain("yt-dlp");
   });
 
   it("creates exercises without a URL from the eigene-Übung form", () => {
@@ -23,6 +25,7 @@ describe("import and custom-exercise UI", () => {
     expect(page).toContain("emptyCustomDraft");
     expect(page).toContain("Ohne Link");
     expect(page).toContain("ExerciseEditor");
+    expect(page).toContain("Videodatei");
   });
 
   it("lets saved exercises change fields and PosePlayer steps afterwards", () => {
@@ -34,6 +37,7 @@ describe("import and custom-exercise UI", () => {
     expect(edit).toContain("ExerciseEditor");
     expect(edit).toContain("prepareImportedSave");
     expect(editor).toContain("PosePlayer");
+    expect(editor).toContain("PoseTrackCapture");
     expect(editor).toContain("applyPoseOverride");
     expect(editor).toContain("Anzeige der Figur");
   });

@@ -24,7 +24,7 @@ Quellcode: dieses Repository (`schlag-art/philipp150-I-am-fit`, Ursprung [github
 | **Sammlung** | Hierarchische Kategorien, Tags, Katalog und eigene Übungen |
 | **Plan** | Mehrere Pläne (eigene und empfangene), Rhythmus, optionaler Zeitraum, aktiver Plan für Heute, Versand per E-Mail |
 | **Beschwerden** | Symptom-Auswahl mit Vorschlägen aus dem Katalog |
-| **Import** | YouTube- oder Instagram-Link → Titel/Beschreibung → Übungen als Gliederpuppe, Felder und Figur vor/nach dem Speichern bearbeitbar; gleicher Link wird erkannt; eigene Übung auch ohne Link |
+| **Import** | YouTube- oder Instagram-Link → Titel/Beschreibung → Übungen als Gliederpuppe, Felder und Figur vor/nach dem Speichern bearbeitbar; gleicher Link wird erkannt; eigene Übung auch ohne Link; Bewegungsspur nur aus Datei-Upload (nicht aus der Einbettung) |
 | **Verlauf** | 28-Tage-Raster, letzte Completions, Anzeigename |
 | **Konto** | Optionale E-Mail-Anmeldung über Supabase; ohne Login nur lokaler Speicher |
 
@@ -43,15 +43,15 @@ Vercel   │ Hosting, Import-API (/api/import)
 
 | Schicht | Technik |
 | --- | --- |
-| UI | `src/app/*`, `src/components/*` (PosePlayer + Gliederpuppe in `StickFigure.tsx`, Originalvideo in `SourceVideo.tsx`), Bottom-Nav |
-| Domain | `src/lib/plan.ts`, `plan-share.ts`, `schedule.ts`, `catalog.ts`, `suggestions.ts`, `poses.ts` |
+| UI | `src/app/*`, `src/components/*` (PosePlayer + Gliederpuppe in `StickFigure.tsx`, Originalvideo in `SourceVideo.tsx`, Bewegungsspur in `PoseTrackCapture.tsx`), Bottom-Nav |
+| Domain | `src/lib/plan.ts`, `plan-share.ts`, `schedule.ts`, `catalog.ts`, `suggestions.ts`, `poses.ts`, `pose-track.ts` |
 | Persistenz | `src/lib/repository.ts` schaltet zwischen Dexie und Supabase |
-| Cloud | `supabase/setup.sql` (Schema inkl. `plans` / `plan_invites`, RLS, Seed), `@supabase/ssr`; Tabellen existieren im Live-Projekt |
-| Import | `src/app/api/import/route.ts` + `extract-meta.ts` / `import-parse.ts` |
+| Cloud | `supabase/setup.sql` (Schema inkl. `plans` / `plan_invites` / `exercises.pose_track`, RLS, Seed), `@supabase/ssr`; Tabellen existieren im Live-Projekt |
+| Import | `src/app/api/import/route.ts` + `extract-meta.ts` / `import-parse.ts`; Client-Analyse mit MediaPipe Pose (WASM) nur wenn Pixel da sind (Upload oder öffentliche Videodatei) |
 | PWA | `src/app/manifest.ts`, Raster-Icons 192/512, `public/sw.js` (Offline-Cache für App-Shell, Katalogseiten, Pose-JS; YouTube/Instagram bewusst **nicht**) |
 | Native Hülle | Capacitor 7 (`capacitor.config.ts`, App-ID `art.schlag.iamfit`); `android/` und `ios/` laden `https://i-am-super-fit.vercel.app`, damit Import-API und Auth erreichbar bleiben. |
 
-Datenmodell (Kern): `Category`, `Complaint`, `Exercise` (Schritte + Pose-IDs), `TrainingPlan` (mehrere Pläne pro Person, mit Urheber), `PlanItem` (gehört zu einem Plan), `PlanInvite` (Einladung per E-Mail), `Completion`, `Profile` (`activePlanId`). Erinnerungen (`reminderEnabled`, `reminderTime`, optional `PlanItem.reminderTime`) werden in Verlauf/Plan gesetzt und lösen lokale bzw. Web-Push-Notifications aus, solange die App oder die installierte PWA erreichbar ist.
+Datenmodell (Kern): `Category`, `Complaint`, `Exercise` (Schritte + Pose-IDs, optional kompakte `poseTrack`-Zeitreihe), `TrainingPlan` (mehrere Pläne pro Person, mit Urheber), `PlanItem` (gehört zu einem Plan), `PlanInvite` (Einladung per E-Mail), `Completion`, `Profile` (`activePlanId`). Erinnerungen (`reminderEnabled`, `reminderTime`, optional `PlanItem.reminderTime`) werden in Verlauf/Plan gesetzt und lösen lokale bzw. Web-Push-Notifications aus, solange die App oder die installierte PWA erreichbar ist.
 
 Pläne können von einer anderen Person (z. B. Physiotherapie) zusammengestellt und an eine E-Mail geschickt werden. Die empfangende Person nimmt die Einladung in der App an; der bisherige Plan bleibt. Teilen braucht Cloud/Auth (Supabase). Ohne Cloud bleiben mehrere eigene Pläne lokal nutzbar.
 
@@ -64,7 +64,7 @@ Pläne können von einer anderen Person (z. B. Physiotherapie) zusammengestellt 
 
 Ohne Vercel nur lokal mit Node. Ohne Supabase nur dieser eine Browser.
 
-Setup-Kurzfassung: `supabase/setup.sql` im SQL-Editor ausführen; Site-URL und Redirect `/auth/callback` setzen; in Vercel `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`. Keine Secrets ins Repo oder in Cursor-Regeln. Das Live-Projekt hat `plans` und `plan_invites`; nach Schema-Änderungen die Datei erneut ausführen.
+Setup-Kurzfassung: `supabase/setup.sql` im SQL-Editor ausführen; Site-URL und Redirect `/auth/callback` setzen; in Vercel `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`. Keine Secrets ins Repo oder in Cursor-Regeln. Das Live-Projekt hat `plans` und `plan_invites`; nach Schema-Änderungen (inkl. `pose_track`) die Datei erneut ausführen.
 
 Entwicklung:
 
@@ -100,7 +100,7 @@ Neue Arbeit wird **unten in TODO.md angehängt**. Fertiges wird dort nur abgehak
 
 ## 6. Risiken und Grenzen
 
-- YouTube/Instagram liefern Metadaten, keine Videoanalyse. Vorschläge vor dem Speichern prüfen und anpassen (Titel, Schritte, Figur). Derselbe Link öffnet den vorhandenen Eintrag statt einer stillen Kopie. Eigene Übungen gehen auch ohne Link.
+- YouTube/Instagram liefern Metadaten, keine Pixel in der iframe-Einbettung. Es gibt keinen YouTube-Downloader. Ohne hochgeladene Datei bleibt der PoseId-Fallback; die App sagt das klar. Vorschläge vor dem Speichern prüfen und anpassen (Titel, Schritte, Figur). Derselbe Link öffnet den vorhandenen Eintrag statt einer stillen Kopie. Eigene Übungen gehen auch ohne Link.
 - Capacitor `webDir` ist `out` und nur Fallback; Store-Builds laden die gehostete Next.js-App (`server.url`), sonst fehlen API-Routen.
 - Erinnerungen brauchen eine Notification-Erlaubnis und eine geöffnete oder installierte App; ohne Push-Server gibt es keine Zustellung bei komplett geschlossenem Browser.
 - Cloud und lokaler Dexie-Stand bleiben getrennte Speicher; die Übernahme ins Konto liegt unter Verlauf.
@@ -121,11 +121,11 @@ Die Practice- und Katalogansicht zeigt keine Strichmännchen-Linien mehr, sonder
 
 ## 9. Nachtrag: Originalvideo als Zusatz
 
-Die Anleitung (Schritte + App-Figur) bleibt die Hauptansicht. Import liest öffentlich verfügbare Titel, Beschreibung und YouTube-Untertitel, wenn sie ohne API-Key erreichbar sind – keine Frame-Analyse. YouTube kann nach „Video ansehen“ über youtube-nocookie eingebettet werden (Click-to-Play). Instagram wird verlinkt („Auf Instagram öffnen“) plus Thumbnail aus og-Daten, wenn vorhanden. Andere Links öffnen im Browser.
+Die Anleitung (Schritte + App-Figur) bleibt die Hauptansicht. Import liest öffentlich verfügbare Titel, Beschreibung und YouTube-Untertitel, wenn sie ohne API-Key erreichbar sind. Die iframe-Einbettung hat keine Pixel für Pose-Estimation – siehe Nachtrag 13. YouTube kann nach „Video ansehen“ über youtube-nocookie eingebettet werden (Click-to-Play). Instagram wird verlinkt („Auf Instagram öffnen“) plus Thumbnail aus og-Daten, wenn vorhanden. Andere Links öffnen im Browser.
 
 ## 10. Nachtrag: Gliederpuppe folgt der Übungsabsicht
 
-Die Figur kopiert kein Video pixelweise. Katalog-Schritte und Import-Vorschläge nutzen authored Keyframes (`poses.ts`): Nackenkreis in vier Richtungen, Schulterheben statt Armheben, Kiefergleiten, wechselseitiges Gehen, linke/rechte Seite bei Krieger, Hüfte und Wadendehnung. Atem im Stand oder Liegen sitzt nicht mehr unpassend hin. Ohne Pose-Estimation bleiben feine Video-Details (exakte Kreisbahn, Gesichtsmuskeln, weiche Übergänge im Clip-Tempo) angenähert.
+Die Figur kopiert kein Video pixelweise als Slideshow. Katalog-Schritte und Import-Vorschläge ohne Clip nutzen authored Keyframes (`poses.ts`): Nackenkreis in vier Richtungen, Schulterheben statt Armheben, Kiefergleiten, wechselseitiges Gehen, linke/rechte Seite bei Krieger, Hüfte und Wadendehnung. Atem im Stand oder Liegen sitzt nicht mehr unpassend hin. Liegt eine Bewegungsspur vor, folgt die Figur dieser Zeitreihe (Nachtrag 13); sonst bleiben feine Video-Details an den authored Posen angenähert.
 
 ## 11. Nachtrag: Offline auf Android (PWA und Capacitor)
 
@@ -133,14 +133,22 @@ Die Figur kopiert kein Video pixelweise. Katalog-Schritte und Import-Vorschläge
 
 **Offline verfügbar:** App-Shell, Sammlung, Plan, Heute, Beschwerden, Practice-Schritte und Gliederpuppen-Posen. Der Katalog (JSON) und die Posen liegen im Bundle bzw. in Dexie; beim ersten Start (auch mit Cloud) wird der Systemkatalog lokal gesät und Cloud-Stand zusätzlich **im Hintergrund** gespiegelt. Die Oberfläche wartet nicht auf Supabase: sobald Dexie Übungen hat, erscheint die Sammlung. „Cloud-Sammlung wird vorbereitet …“ ist kein Vollbild mehr und nur ein kurzes, nicht blockierendes Banner, falls lokal noch leer ist und die Cloud wirklich lädt – mit Timeout und Fallback auf den gebündelten Katalog. Offline entfällt der Cloud-Wait.
 
-**Nur mit Internet:** Originalvideo (YouTube youtube-nocookie, Instagram-Link, sonstige Source-URL), Import-API, Plan-Einladungen, frischer Cloud-Sync. Die Practice-Seite bleibt ohne Video nutzbar und zeigt „Video braucht Internet“.
+**Nur mit Internet:** Originalvideo (YouTube youtube-nocookie, Instagram-Link, sonstige Source-URL), Import-API, Plan-Einladungen, frischer Cloud-Sync, erstes Laden des MediaPipe-Modells zur Analyse. Die Practice-Seite bleibt ohne Video nutzbar und zeigt „Video braucht Internet“. Eine bereits gespeicherte Bewegungsspur spielt offline.
 
-**Datenmenge:** Katalog JSON ~33 KB, Posen ~15 KB, zusammen ~48 KB. First-Load-JS der App-Shell liegt um 226 KB. Eine YouTube-Minute liegt grob bei ≥ 8 MB. Videos werden deshalb **nicht** vorab geladen.
+**Datenmenge:** Katalog JSON ~33 KB, Posen ~15 KB, zusammen ~48 KB. First-Load-JS der App-Shell liegt um 226 KB. Eine Bewegungsspur liegt im KB- bis niedrigen Hunderte-KB-Bereich. Eine YouTube-Minute liegt grob bei ≥ 8 MB. Videos werden deshalb **nicht** vorab geladen.
 
 ## 12. Nachtrag: Import bearbeiten, Duplikate, ohne Link
 
-Nach dem Ableiten eines Links ist der Vorschlag ein Formular, keine tote Karte: Titel, Kurztext, Schritte, Dauer, Kategorien, Beschwerden und die Figur (Pose je Schritt, PosePlayer-Vorschau) lassen sich vor dem Speichern ändern. Dieselbe Bearbeitung steht danach unter „Felder und Figur anpassen“ (`/catalog/[id]/edit`). YouTube bleibt Click-to-Play, Instagram outbound; es gibt keine Pose-Estimation aus dem Video.
+Nach dem Ableiten eines Links ist der Vorschlag ein Formular, keine tote Karte: Titel, Kurztext, Schritte, Dauer, Kategorien, Beschwerden und die Figur (Pose je Schritt, PosePlayer-Vorschau, optional Bewegungsspur) lassen sich vor dem Speichern ändern. Dieselbe Bearbeitung steht danach unter „Felder und Figur anpassen“ (`/catalog/[id]/edit`). YouTube bleibt Click-to-Play, Instagram outbound.
 
 Derselbe Link (normalisiert, z. B. youtu.be und watch?v=) wird in der lokalen bzw. Cloud-Sammlung erkannt – eigene Übungen und Katalog-Einträge mit Source-URL. Die App zeigt „Dieser Link ist schon in der Sammlung“, öffnet den vorhandenen Eintrag zum Anpassen und legt keine stille zweite Kopie an.
 
 Ohne Link: Sammlung „Selbst anlegen“ und auf der Import-Seite „Ohne Link anlegen“. Eigene Übungen sind `is_system` false und haben keine Source-URL.
+
+## 13. Nachtrag: Bewegungsspur statt Standbild-Katalog
+
+Beim Import oder „Selbst anlegen“ kann ein **Videoclip einmal** im Browser analysiert werden (MediaPipe Pose / BlazePose, WASM, ca. 8–12 fps). Ergebnis ist eine kompakte Gelenk-Zeitreihe (`Exercise.poseTrack`, Dexie + Supabase `jsonb`), die der vorhandenen Gliederpuppe zugeordnet wird. PosePlayer spielt die Spur (Loop/Sync zur Dauer); ohne Spur bleiben die authored PoseIds. Schritte bleiben bearbeitbar; neu erkennen ersetzt die Spur.
+
+**Pixelquellen:** Hochgeladene Datei ist der zuverlässige Weg. YouTube/Instagram-iframes haben keine Pixel – kein yt-dlp, keine stille Analyse der Einbettung. Nur wenn schon eine öffentliche Videodatei-URL (mp4/webm/mov) vorliegt, darf der Client sie lesen. Sonst Hinweis: Datei oder kurzen Clip hochladen.
+
+Analyse-UX: „Bewegung wird erkannt …“; Fehler, wenn keine Person gefunden wird. Playback-Hinweis „Video braucht Internet“ bleibt für Originalclips.

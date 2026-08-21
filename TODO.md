@@ -127,3 +127,11 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] Gleicher Link (eigene Übung oder Katalog-Source-URL) wird erkannt: Hinweis „schon in der Sammlung“, vorhandene Übung öffnen/anpassen, keine stille zweite Kopie
 - [x] Eigene Übung ohne Link anlegen (Sammlung „Selbst anlegen“, Import „Ohne Link anlegen“); `is_system` false, ohne Source-URL
 - [x] Nach dem Speichern: „Felder und Figur anpassen“ auf der Übungsseite (`/catalog/[id]/edit`)
+
+## Bewegungsspur (Pose-Track)
+
+- [x] Kompakte Gelenk-Zeitreihe am Exercise speichern (Dexie + Supabase `pose_track` jsonb), Größe KB–niedrige Hunderte KB, kein YouTube-Cache
+- [x] Einmalanalyse im Browser (MediaPipe Pose WASM) bei Datei-Upload bzw. öffentlicher Videodatei; Playback spielt nur die Spur
+- [x] YouTube/Instagram: Metadaten + PoseId-Fallback, klarer Hinweis zum Hochladen; kein yt-dlp
+- [x] PosePlayer: Spur wenn vorhanden, sonst PoseIds; Schritte weiter editierbar; Neu-Erkennen ersetzt die Spur
+- [x] Tests für JSON-Form, Track-Playback, PoseId-Fallback, Upload-Pfad; Lint und Production-Build

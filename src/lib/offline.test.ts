@@ -25,6 +25,7 @@ describe("offline media policy", () => {
     expect(isNetworkOnlyMediaUrl("https://rr1---sn-abc.googlevideo.com/videoplayback")).toBe(true);
     expect(isNetworkOnlyMediaUrl("blob:https://i-am-super-fit.vercel.app/1")).toBe(true);
     expect(isNetworkOnlyMediaUrl("https://cdn.example.com/clip.mp4")).toBe(true);
+    expect(isNetworkOnlyMediaUrl("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm/vision.wasm")).toBe(true);
     expect(isNetworkOnlyMediaUrl("https://i-am-super-fit.vercel.app/practice/ex-neck-circles", "video")).toBe(true);
   });
 
@@ -101,6 +102,8 @@ describe("service worker source", () => {
     expect(sw).toContain("instagram");
     expect(sw).toContain("precache");
     expect(sw).toContain("/catalog");
+    expect(sw).toContain("wasm");
     expect(sw).not.toContain("cache.addAll(PRECACHE)");
+    expect(sw).not.toContain("yt-dlp");
   });
 });

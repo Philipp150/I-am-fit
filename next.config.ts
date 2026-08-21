@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  transpilePackages: ["@mediapipe/tasks-vision"],
+  serverExternalPackages: ["@mediapipe/tasks-vision"],
   async headers() {
     return [
       {

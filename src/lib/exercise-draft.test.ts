@@ -1,15 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { deriveExercisesFromMeta } from "./import-parse";
-import {
-  applyPoseOverride,
-  applyStepPatch,
-  canSaveDraft,
-  createCustomExercise,
-  emptyCustomDraft,
-  exerciseToDraft,
-  patchDraft,
-  prepareImportedSave,
-} from "./exercise-draft";
+import { applyPoseOverride, applyStepPatch, canSaveDraft, createCustomExercise, emptyCustomDraft, exerciseToDraft, patchDraft, prepareImportedSave } from "./exercise-draft";
+import { POSES } from "./poses";
+import { encodePoseTrack } from "./pose-track";
 import type { Exercise } from "./types";
 
 const NOW = "2026-08-21T10:00:00.000Z";
@@ -44,6 +37,7 @@ describe("edit generated import fields", () => {
     expect(saved.isSystem).toBe(false);
     expect(saved.source.type).toBe("import");
     expect(saved.source.url).toBe("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    expect(saved.poseTrack).toBeUndefined();
   });
 
   it("updates an existing duplicate instead of creating a second copy", () => {
@@ -100,6 +94,7 @@ describe("create without a source URL", () => {
     expect(exercise.isSystem).toBe(false);
     expect(exercise.kind).toBe("breath");
     expect(exercise.steps).toHaveLength(2);
+    expect(exercise.poseTrack).toBeUndefined();
     expect(canSaveDraft(emptyCustomDraft())).toBe(false);
     expect(canSaveDraft(patchDraft(emptyCustomDraft(), { title: "Pause im Stehen" }))).toBe(true);
   });
@@ -116,5 +111,45 @@ describe("pose override for the mannequin", () => {
     expect(overridden[1].pose).toBe("warrior");
     expect(overridden[1].text).toBe("Beugen.");
     expect(applyPoseOverride(steps, 9, "tree")).toEqual(steps);
+  });
+});
+
+describe("pose track on drafts", () => {
+  it("keeps an uploaded track through save and replaces it on re-analyze", () => {
+    const track = encodePoseTrack({
+      poses: [POSES.stand, POSES.fold],
+      durationSec: 2,
+      fps: 10,
+      sourceKind: "upload",
+      analyzedAt: "2026-08-21T10:00:00.000Z",
+    });
+    const replaced = encodePoseTrack({
+      poses: [POSES.reachUp, POSES.stand],
+      durationSec: 1.5,
+      fps: 10,
+      sourceKind: "upload",
+      analyzedAt: "2026-08-21T11:00:00.000Z",
+    });
+    const first = prepareImportedSave({
+      draft: patchDraft(emptyCustomDraft(), { title: "Clip", poseTrack: track }),
+      now: NOW,
+      newId: "ex-track",
+    });
+    expect(first.poseTrack).toEqual(track);
+    const second = prepareImportedSave({
+      draft: patchDraft(exerciseToDraft(first), { poseTrack: replaced }),
+      existing: first,
+      now: NOW,
+      newId: "ex-other",
+    });
+    expect(second.id).toBe("ex-track");
+    expect(second.poseTrack).toEqual(replaced);
+    const cleared = prepareImportedSave({
+      draft: patchDraft(exerciseToDraft(second), { poseTrack: null }),
+      existing: second,
+      now: NOW,
+      newId: "ex-other",
+    });
+    expect(cleared.poseTrack).toBeNull();
   });
 });

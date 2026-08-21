@@ -1,3 +1,7 @@
+import { lerpPose, POSES } from "./poses";
+import { hasPlayableTrack, sampleTrackPose, type PoseTrack } from "./pose-track";
+import type { ExerciseStep } from "./types";
+
 export function nextStepIndex(
   index: number,
   length: number,
@@ -7,4 +11,81 @@ export function nextStepIndex(
   if (index + 1 < length) return { index: index + 1, finished: false };
   if (loop) return { index: 0, finished: false };
   return { index, finished: true };
+}
+
+export function playerMode(track: PoseTrack | null | undefined): "track" | "steps" {
+  return hasPlayableTrack(track) ? "track" : "steps";
+}
+
+export function stepsDurationSec(steps: ExerciseStep[]): number {
+  if (steps.length === 0) return 1;
+  return steps.reduce((sum, step) => sum + Math.max(0.2, step.durationSec || 0), 0);
+}
+
+export function stepStartTimes(steps: ExerciseStep[], totalDuration: number): number[] {
+  const sum = stepsDurationSec(steps);
+  const scale = sum > 0 ? totalDuration / sum : 1;
+  let acc = 0;
+  return steps.map((step) => {
+    const start = acc * scale;
+    acc += Math.max(0.2, step.durationSec || 0);
+    return start;
+  });
+}
+
+export function captionAtTime(
+  steps: ExerciseStep[],
+  timeSec: number,
+  durationSec: number,
+): { index: number; text: string } {
+  if (steps.length === 0) return { index: 0, text: "" };
+  const starts = stepStartTimes(steps, Math.max(durationSec, 0.1));
+  let index = 0;
+  for (let i = 0; i < starts.length; i++) {
+    if (timeSec + 1e-4 >= starts[i]) index = i;
+  }
+  return { index, text: steps[index]?.text ?? "" };
+}
+
+export function jumpTrackTime(
+  steps: ExerciseStep[],
+  durationSec: number,
+  currentTime: number,
+  deltaSteps: number,
+): number {
+  if (steps.length === 0) return Math.max(0, currentTime);
+  const starts = stepStartTimes(steps, Math.max(durationSec, 0.1));
+  let index = 0;
+  for (let i = 0; i < starts.length; i++) {
+    if (currentTime + 1e-4 >= starts[i]) index = i;
+  }
+  const next = Math.min(steps.length - 1, Math.max(0, index + deltaSteps));
+  return starts[next] ?? 0;
+}
+
+export function poseForSteps(steps: ExerciseStep[], index: number, blend: number) {
+  const safe = steps.length > 0 ? steps : [{ pose: "stand" as const, text: "", durationSec: 4 }];
+  const safeIndex = Math.min(Math.max(0, index), safe.length - 1);
+  const current = safe[safeIndex];
+  const previous = safe[(safeIndex - 1 + safe.length) % safe.length];
+  return lerpPose(POSES[previous.pose] ?? POSES.stand, POSES[current.pose] ?? POSES.stand, blend);
+}
+
+export function poseForPlayer(input: {
+  track?: PoseTrack | null;
+  steps: ExerciseStep[];
+  timeSec: number;
+  stepIndex: number;
+  blend: number;
+  loop: boolean;
+}) {
+  if (hasPlayableTrack(input.track)) {
+    return sampleTrackPose(input.track, input.timeSec, input.loop);
+  }
+  return {
+    pose: poseForSteps(input.steps, input.stepIndex, input.blend),
+    t: input.timeSec,
+    finished: false,
+    index: input.stepIndex,
+  };
 }

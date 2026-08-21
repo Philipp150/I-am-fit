@@ -1,3 +1,5 @@
+import type { PoseTrack } from "./pose-track";
+
 export type ExerciseKind = "movement" | "breath" | "mantra" | "mind" | "other";
 
 export type PoseId =
@@ -106,6 +108,8 @@ export type Exercise = {
     provider?: "youtube" | "instagram" | "web";
     thumbnailUrl?: string;
   };
+  /** Compact mannequin timeline from a one-time clip analysis. Optional; PoseIds remain the fallback. */
+  poseTrack?: PoseTrack | null;
   isSystem: boolean;
   createdAt: string;
   updatedAt: string;

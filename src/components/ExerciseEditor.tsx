@@ -2,6 +2,7 @@
 
 import { CategoryPicker } from "@/components/CategoryPicker";
 import { PosePlayer } from "@/components/PosePlayer";
+import { PoseTrackCapture } from "@/components/PoseTrackCapture";
 import { StickFigure } from "@/components/StickFigure";
 import { Card, Field, fieldClass } from "@/components/ui";
 import { applyPoseOverride, applyStepPatch, emptyStep, patchDraft } from "@/lib/exercise-draft";
@@ -105,12 +106,20 @@ export function ExerciseEditor({
       <Card>
         <h3 className="font-display text-xl">Figur und Schritte</h3>
         <p className="mb-3 text-sm text-forest-light">
-          Jeder Schritt ist ein Bild der Figur plus Text. Du kannst Pose und Text ändern; die Anleitung folgt der Figur, nicht dem Originalvideo.
+          Jeder Schritt ist Text plus eine Pose. Wenn eine Bewegungsspur aus einem Clip liegt, spielt die Figur sie ab;
+          sonst die gewählten Posen. Du kannst Schritte weiter bearbeiten; neu erkennen ersetzt die Spur.
         </p>
+        <div className="mb-4">
+          <PoseTrackCapture
+            value={value.poseTrack}
+            sourceUrl={value.source.url}
+            onChange={(poseTrack) => onChange(patchDraft(value, { poseTrack }))}
+          />
+        </div>
         {showPlayer && (
           <div className="mb-4">
             <p className="mb-2 text-xs uppercase tracking-[0.18em] text-forest-light">Anzeige der Figur</p>
-            <PosePlayer steps={value.steps} autoPlay={false} loop={false} />
+            <PosePlayer steps={value.steps} poseTrack={value.poseTrack} autoPlay={false} loop={false} />
           </div>
         )}
         <div className="space-y-4">

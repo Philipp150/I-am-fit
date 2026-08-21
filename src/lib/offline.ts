@@ -46,6 +46,7 @@ export function isNetworkOnlyMediaUrl(url: string, destination = ""): boolean {
     const parsed = new URL(url, "https://i-am-super-fit.vercel.app");
     if (parsed.protocol === "blob:" || parsed.protocol === "data:") return true;
     if (/\.(mp4|webm|m4v|mov|m3u8)(\?|$)/i.test(parsed.pathname)) return true;
+    if (/\.(wasm|task)(\?|$)/i.test(parsed.pathname)) return true;
     return isVideoOrSocialHost(parsed.hostname);
   } catch {
     return false;

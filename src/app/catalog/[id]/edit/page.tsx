@@ -46,7 +46,8 @@ export default function EditExercisePage() {
     <div className="space-y-5">
       <h2 className="font-display text-3xl text-forest-dark">Übung anpassen</h2>
       <p className="text-sm text-ink/80">
-        Titel, Schritte und die Figur kannst du ändern. Das Originalvideo bleibt nur ein Zusatz, falls ein Link hinterlegt ist.
+        Titel, Schritte und die Figur kannst du ändern. Eine Bewegungsspur kommt aus einer hochgeladenen Datei und ersetzt
+        beim erneuten Erkennen die alte Spur. Das Originalvideo bleibt nur ein Zusatz, falls ein Link hinterlegt ist.
       </p>
       {exercise.isSystem && (
         <p className="rounded-2xl bg-sage/40 px-4 py-3 text-sm text-forest-dark" role="status">

@@ -45,6 +45,7 @@ function PracticeInner() {
         <PosePlayer
           key={run}
           steps={exercise.steps}
+          poseTrack={exercise.poseTrack}
           loop={false}
           onFinished={() => setEnded(true)}
         />

@@ -125,7 +125,10 @@ export default function ImportPage() {
     <div className="space-y-5">
       <h2 className="font-display text-3xl text-forest-dark">Aus einem Link ableiten</h2>
       <p className="text-sm leading-relaxed text-ink/80">
-        Füge einen YouTube- oder Instagram-Link ein. Die App liest öffentlich verfügbare Titel, Beschreibungen und Untertitel – wenn sie erreichbar sind – und schlägt daraus Übungen für unsere Figur vor. Das ist keine Bild-für-Bild-Videoanalyse. Du kannst Titel, Schritte und die Figur vor dem Speichern anpassen. Das Originalvideo bleibt nur zusätzlich; die Anleitung bleibt die Figur mit Schritten.
+        Füge einen YouTube- oder Instagram-Link ein. Die App liest öffentlich verfügbare Titel, Beschreibungen und
+        Untertitel – wenn sie erreichbar sind – und schlägt Übungen vor. YouTube- und Instagram-Einbettungen liefern keine
+        Pixel: sie werden nicht analysiert. Für eine Bewegungsspur lade die Datei oder einen kurzen Clip hoch. Das
+        Originalvideo bleibt nur zusätzlich.
       </p>
       <Field label="Link">
         <input
@@ -169,7 +172,9 @@ export default function ImportPage() {
                 {usedCaptions
                   ? "Öffentliche Untertitel wurden mitgelesen, danach zeichnen wir unsere Figur."
                   : "Titel und Beschreibung wurden gelesen. Öffentliche Untertitel lagen nicht vor oder waren nicht erreichbar."}{" "}
-                Felder und Figur sind bearbeitbar, bevor du speicherst. Das Originalvideo kannst du später zusätzlich ansehen.
+                Felder und Figur sind bearbeitbar, bevor du speicherst. Eine Bewegungsspur entsteht nur aus einer
+                hochgeladenen Datei (oder einer öffentlichen Videodatei), nicht aus der YouTube-Einbettung. Das
+                Originalvideo kannst du später zusätzlich ansehen.
               </p>
             </>
           )}

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { exerciseFromRow, exerciseToRow, planFromRow, planToRow, trainingPlanFromRow, trainingPlanToRow } from "./mappers";
+import { encodePoseTrack } from "./pose-track";
+import { POSES } from "./poses";
 import type { Exercise, PlanItem, TrainingPlan } from "./types";
 
 const sample: Exercise = {
@@ -25,6 +27,7 @@ describe("supabase mappers", () => {
     expect(row.category_ids).toEqual(["cat-mantras"]);
     expect(exerciseFromRow(row).title).toBe("Test");
     expect(exerciseFromRow(row).categoryIds).toEqual(["cat-mantras"]);
+    expect(exerciseFromRow(row).poseTrack).toBeUndefined();
   });
 
   it("clears owner for catalog exercises", () => {
@@ -62,5 +65,19 @@ describe("supabase mappers", () => {
     const itemRow = planToRow(item, "patient-1");
     expect(itemRow.plan_id).toBe("plan-1");
     expect(planFromRow(itemRow).planId).toBe("plan-1");
+  });
+
+  it("stores a compact pose track as jsonb and reads it back", () => {
+    const poseTrack = encodePoseTrack({
+      poses: [POSES.stand, POSES.fold],
+      durationSec: 3,
+      fps: 10,
+      sourceKind: "upload",
+      analyzedAt: "2026-08-21T10:00:00.000Z",
+    });
+    const row = exerciseToRow({ ...sample, poseTrack }, "user-1");
+    expect(row.pose_track).toEqual(poseTrack);
+    expect(exerciseFromRow(row).poseTrack).toEqual(poseTrack);
+    expect(exerciseFromRow({ ...row, pose_track: { version: 9 } }).poseTrack).toBeUndefined();
   });
 });

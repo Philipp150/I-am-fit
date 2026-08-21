@@ -9,4 +9,10 @@ describe("supabase seed", () => {
       expect(seed).toContain(`'${exercise.id}'`);
     }
   });
+
+  it("adds pose_track jsonb for compact mannequin timelines", () => {
+    const schema = readFileSync(new URL("../../supabase/schema.sql", import.meta.url), "utf8");
+    expect(schema).toContain("pose_track jsonb");
+    expect(schema).toContain("alter table public.exercises add column if not exists pose_track jsonb");
+  });
 });
