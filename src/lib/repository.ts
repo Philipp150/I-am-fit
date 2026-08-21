@@ -426,6 +426,9 @@ export async function addCompletion(item: Completion): Promise<void> {
   throwIfError(error);
   remember(() => getDb().completions.put(item));
   notifyData();
+}
+
+export async function getProfile(): Promise<Profile | undefined> {
   if (!isCloudEnabled()) return getDb().profile.get("solo");
   const user = await currentUser();
   if (!user) return undefined;

@@ -135,6 +135,6 @@ Die Figur kopiert kein Video pixelweise. Katalog-Schritte und Import-Vorschläge
 
 **Nur mit Internet:** Originalvideo (YouTube youtube-nocookie, Instagram-Link, sonstige Source-URL), Import-API, Plan-Einladungen, frischer Cloud-Sync. Die Practice-Seite bleibt ohne Video nutzbar und zeigt „Video braucht Internet“.
 
-**Datenmenge:** Katalog + Kategorien + Beschwerden + Posen liegen im Bereich weniger Dutzend KB (weit unter einer YouTube-Minute, grob ≥ 8 MB). YouTube-Streams werden deshalb **nicht** vorab geladen.
+**Datenmenge:** Katalog JSON ~33 KB, Posen ~15 KB, zusammen ~48 KB. First-Load-JS der App-Shell liegt um 226 KB. Eine YouTube-Minute liegt grob bei ≥ 8 MB. Videos werden deshalb **nicht** vorab geladen.
 
 Capacitor: erster Kaltstart braucht Netz, um die Live-App zu laden. Danach gelten SW-Cache und Dexie wie in der installierten PWA. `webDir: out` bleibt Fallback; Store-Builds sollen weiter `server.url` auf Vercel nutzen.
