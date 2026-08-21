@@ -5,7 +5,7 @@ import {
   shouldStartCloudHydrate,
   withTimeout,
 } from "./bootstrap";
-import { ensureCatalogSeeded, ensureSeeded, getDb, newId } from "./db";
+import { ensureCatalogSeeded, ensureSeeded, getDb, listLocalExercises, newId } from "./db";
 import { isCloudEnabled } from "./env";
 import {
   completionFromRow,
@@ -148,7 +148,7 @@ export async function listComplaints(): Promise<Complaint[]> {
 }
 
 export async function listExercises(): Promise<Exercise[]> {
-  if (!isCloudEnabled()) return getDb().exercises.orderBy("title").toArray();
+  if (!isCloudEnabled()) return listLocalExercises();
   const { data, error } = await createBrowserSupabase().from("exercises").select("*").order("title");
   throwIfError(error);
   const items = ((data ?? []) as ExerciseRow[]).map(exerciseFromRow);

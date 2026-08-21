@@ -115,3 +115,7 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 ## Cloud-Katalog-Banner (Live)
 
 - [x] Vollbild „Cloud-Sammlung wird vorbereitet …“ bei jedem Laden entfernt: lokaler Dexie-Katalog sofort, Cloud-Hydration im Hintergrund, Timeout + Fallback, offline ohne Cloud-Wait
+
+## Client-Exception (Live)
+
+- [x] Next.js-Fehlerseite (`SchemaError` durch Dexie `orderBy("title")` ohne Index) behoben: Übungen lokal per `toArray` + Sort, Live-Queries fangen Dexie-Fehler; Cloud-Banner bleibt nicht-blockierend

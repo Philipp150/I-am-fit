@@ -76,7 +76,7 @@ npm run lint
 npm run dev
 ```
 
-Katalog-SQL neu: `npm run seed:sql`. CI auf Push/PR: `npm test` und `npm run lint`. Vercel Production führt `next build` inkl. TypeScript aus; fehlende Exporte (z. B. `getProfile`) oder `null` in `CaptionTrack[]` stoppen den Deploy.
+Katalog-SQL neu: `npm run seed:sql`. CI auf Push/PR: `npm test` und `npm run lint`. Vercel Production führt `next build` inkl. TypeScript aus; fehlende Exporte (z. B. `getProfile`) oder `null` in `CaptionTrack[]` stoppen den Deploy. Dexie `orderBy` nur auf indizierten Feldern: `exercises.title` ist kein Index – Sortierung im Speicher, sonst `SchemaError` und die Next.js-Fehlerseite.
 
 ## 5. Phasen
 

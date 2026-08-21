@@ -18,7 +18,7 @@ export class FitDatabase extends Dexie {
     this.version(1).stores({
       categories: "id, parentId, slug",
       complaints: "id",
-      exercises: "id, kind, isSystem, updatedAt",
+      exercises: "id, kind, isSystem, updatedAt", // no title index — sort in memory
       planItems: "id, exerciseId, enabled",
       completions: "id, exerciseId, completedAt",
       profile: "id",
@@ -27,7 +27,7 @@ export class FitDatabase extends Dexie {
       .stores({
         categories: "id, parentId, slug",
         complaints: "id",
-        exercises: "id, kind, isSystem, updatedAt",
+        exercises: "id, kind, isSystem, updatedAt", // no title index — sort in memory
         plans: "id, source, archived, createdAt",
         planItems: "id, planId, exerciseId, enabled",
         planInvites: "id, toEmail, status, createdAt",
@@ -63,6 +63,15 @@ export function getDb(): FitDatabase {
   }
   if (!db) db = new FitDatabase();
   return db;
+}
+
+/** `title` is not a Dexie index; `orderBy("title")` throws SchemaError and crashes the app. */
+export function sortByTitle<T extends { title: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => a.title.localeCompare(b.title, "de"));
+}
+
+export async function listLocalExercises(): Promise<Exercise[]> {
+  return sortByTitle(await getDb().exercises.toArray());
 }
 
 export async function ensureCatalogSeeded(): Promise<void> {
