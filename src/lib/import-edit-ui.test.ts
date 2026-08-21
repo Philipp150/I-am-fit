@@ -46,8 +46,9 @@ describe("import and custom-exercise UI", () => {
     expect(extract).toContain("if (track) tracks.push(track)");
     expect(repository).toContain("export async function getProfile(): Promise<Profile | undefined> {");
     expect(repository).toContain("export async function addCompletion(item: Completion): Promise<void> {");
+    expect(db).toContain("sortByTitle(await getDb().exercises.toArray())");
     expect(db).not.toMatch(/exercises:\s*"[^"]*title[^"]*"/);
-    expect(db).not.toContain('orderBy("title")');
     expect(repository).not.toContain('orderBy("title")');
+    expect(repository).toContain("listLocalExercises");
   });
 });
