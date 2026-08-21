@@ -25,7 +25,10 @@ export function PosePlayer({
   className,
   onFinished,
 }: Props) {
-  const safeSteps = steps.length > 0 ? steps : [{ pose: "stand" as const, text: "Noch keine Schritte.", durationSec: 4 }];
+  const safeSteps = useMemo(
+    () => (steps.length > 0 ? steps : [{ pose: "stand" as const, text: "Noch keine Schritte.", durationSec: 4 }]),
+    [steps],
+  );
   const track = hasPlayableTrack(poseTrack) ? poseTrack : null;
   const mode = playerMode(track);
 

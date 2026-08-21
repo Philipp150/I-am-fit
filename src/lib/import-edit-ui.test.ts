@@ -14,7 +14,8 @@ describe("import and custom-exercise UI", () => {
     expect(page).toContain("Dieser Link ist schon in der Sammlung");
     expect(page).toContain("Ohne Link anlegen");
     expect(page).toContain("Anpassungen speichern");
-    expect(page).toContain("keine Pixel");
+    expect(page).toContain("liefern keine");
+    expect(page).toContain("nicht analysiert");
     expect(page).not.toContain("ExerciseCard");
     expect(page).not.toContain("yt-dlp");
   });
