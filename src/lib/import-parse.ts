@@ -189,16 +189,19 @@ export function extractNumberedItems(text: string): string[] {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
-  const numbered = lines
+  const fromLines = lines
     .map((line) => line.match(/^(?:\d+[\).:-]|[-*•])\s+(.+)/))
     .filter((match): match is RegExpMatchArray => Boolean(match))
     .map((match) => match[1].replace(/\s+/g, " ").trim())
     .filter((item) => item.length > 2);
-  if (numbered.length > 0) return numbered;
-  const inline = [...text.matchAll(/(?:^|\s)(\d{1,2})[).]\s+(.+?)(?=(?:\s+\d{1,2}[).]\s+)|$)/g)]
+  if (fromLines.length >= 2) return fromLines;
+
+  const inlineSource = fromLines.length === 1 ? lines.find((line) => /^(?:\d+[\).:-]|[-*•])\s+/.test(line)) ?? text : text;
+  const inline = [...inlineSource.matchAll(/(?:^|\s)(\d{1,2})[).]\s+(.+?)(?=(?:\s+\d{1,2}[).]\s+)|$)/g)]
     .map((match) => match[2].replace(/\s+/g, " ").trim())
     .filter((item) => item.length > 2);
-  return inline.length >= 2 ? inline : [];
+  if (inline.length >= 2) return inline;
+  return fromLines;
 }
 
 export function guessKind(text: string): ExerciseKind {
