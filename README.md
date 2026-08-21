@@ -50,6 +50,10 @@ NEXT_PUBLIC_SITE_URL=https://i-am-super-fit.vercel.app
 
 Ohne diese Variablen startet die App trotzdem – dann nur mit lokalem Browser-Speicher.
 
+## Projektplan
+
+Stand, Phasen und offene Arbeit: [PROJEKTPLAN.md](PROJEKTPLAN.md), [TODO.md](TODO.md). In der Todo-Liste werden Punkte nur abgehakt, nicht gelöscht.
+
 ## Entwicklung
 
 ```bash
