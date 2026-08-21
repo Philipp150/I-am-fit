@@ -42,7 +42,7 @@ describe("theme language in the UI", () => {
     expect(onboarding).toContain("ThemeChips");
     expect(onboarding).toContain("Auch Bauch zählt");
     expect(onboarding).toContain("Das reicht für heute");
-    expect(onboarding).toContain("Kein Konto");
+    expect(onboarding).toContain("kein Konto");
     expect(onboarding).toContain("auch offline");
     expect(onboarding).toContain("Erinnerung um {time} an");
     expect(onboarding).not.toContain("Du musst");
