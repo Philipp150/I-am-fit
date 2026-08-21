@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["@mediapipe/tasks-vision", "tesseract.js"],
+  transpilePackages: ["@mediapipe/tasks-vision"],
   serverExternalPackages: ["tesseract.js"],
   async headers() {
     return [

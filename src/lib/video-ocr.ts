@@ -79,7 +79,8 @@ export function grabVideoFrame(
 }
 
 export async function createTesseractReader(): Promise<FrameTextReader> {
-  const { createWorker } = await import("tesseract.js");
+  const tesseract = await import("tesseract.js");
+  const createWorker = tesseract.createWorker;
   const urls = tesseractCdnUrls();
   const worker = await createWorker("deu", 1, {
     workerPath: urls.workerPath,
@@ -87,7 +88,7 @@ export async function createTesseractReader(): Promise<FrameTextReader> {
     langPath: urls.langPath,
   });
   await worker.setParameters({
-    tessedit_pageseg_mode: "11",
+    tessedit_pageseg_mode: tesseract.PSM.SPARSE_TEXT,
   });
   return {
     async read(image) {
