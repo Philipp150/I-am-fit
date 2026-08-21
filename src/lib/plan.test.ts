@@ -7,6 +7,7 @@ describe("today overview", () => {
   const plan: PlanItem[] = [
     {
       id: "p1",
+      planId: "plan-1",
       exerciseId: "ex-a",
       enabled: true,
       rhythm: { kind: "daily", startDate: "2026-08-01" },
@@ -14,6 +15,7 @@ describe("today overview", () => {
     },
     {
       id: "p2",
+      planId: "plan-1",
       exerciseId: "ex-b",
       enabled: true,
       rhythm: { kind: "weekends", startDate: "2026-08-01" },

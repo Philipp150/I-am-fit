@@ -5,15 +5,17 @@ import { useMemo } from "react";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import { Card, PrimaryButton } from "@/components/ui";
 import { greeting } from "@/lib/copy";
-import { useCompletions, useExercises, usePlanItems, useProfile } from "@/lib/hooks";
+import { useCompletions, useExercises, usePlanItems, useActivePlan, useProfile } from "@/lib/hooks";
 import { formatDuration, streakLength } from "@/lib/schedule";
 import { addExerciseToPlan, todayOverview } from "@/lib/plan";
+import { creatorAttribution } from "@/lib/plan-share";
 
 export default function HomePage() {
   const exercises = useExercises();
   const planItems = usePlanItems();
   const completions = useCompletions();
   const profile = useProfile();
+  const activePlan = useActivePlan();
   const today = useMemo(() => new Date(), []);
   const overview = todayOverview(planItems, completions, today);
 
@@ -42,13 +44,18 @@ export default function HomePage() {
         <p className="mt-2 text-sm leading-relaxed text-ink/80">
           Die guten Übungen gehen nicht verloren – sie warten hier, mit einer Figur, die immer gleich aussieht, und einem Plan, der dich erinnert.
         </p>
+        {activePlan && (
+          <p className="mt-2 text-xs text-forest-light">
+            Aktiver Plan: {activePlan.title} · {creatorAttribution(activePlan)}
+          </p>
+        )}
         <div className="mt-4 flex gap-3">
           <Stat label="Heute" value={`${overview.doneCount}/${overview.due.length || "–"}`} />
           <Stat label="Serie" value={streak ? `${streak} Tage` : "neu"} />
         </div>
       </Card>
 
-      {overview.due.length === 0 ? (
+      {overview.due.length === 0 && planItems.length === 0 ? (
         <Card>
           <h3 className="font-display text-2xl text-forest-dark">Noch kein Plan</h3>
           <p className="mt-2 text-sm leading-relaxed text-ink/80">
@@ -62,6 +69,19 @@ export default function HomePage() {
           <PrimaryButton className="mt-4 w-full" onClick={adoptStarters} disabled={starters.length === 0}>
             Diese drei in den Plan
           </PrimaryButton>
+          <Link href="/plan" className="mt-3 inline-block text-sm text-forest underline">
+            Alle Pläne
+          </Link>
+        </Card>
+      ) : overview.due.length === 0 ? (
+        <Card>
+          <h3 className="font-display text-2xl text-forest-dark">Heute Pause im aktiven Plan</h3>
+          <p className="mt-2 text-sm leading-relaxed text-ink/80">
+            In „{activePlan?.title ?? "deinem Plan"}“ ist heute nichts vorgesehen. Du kannst einen anderen Plan aktivieren.
+          </p>
+          <Link href="/plan" className="mt-3 inline-block text-sm text-forest underline">
+            Pläne ansehen
+          </Link>
         </Card>
       ) : overview.allDone ? (
         <Card className="bg-forest text-cream">

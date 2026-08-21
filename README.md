@@ -21,7 +21,7 @@ Die kostenlosen Pläne (Vercel Hobby, Supabase Free) reichen für den Start.
 - **Katalog + eigene Übungen**: Bewegung, Atem, Mantras, Achtsamkeit
 - **Erklärung** als Text plus einheitliche Strichfigur; Schritte aneinandergereiht wirken wie ein kurzes Video
 - **Import** von YouTube- oder Instagram-Links: Titel und Beschreibung werden gelesen, eine oder mehrere Übungen vorgeschlagen und als Strichfigur neu gezeichnet
-- **Übungsplan** mit Rhythmus und optionalem Zeitraum
+- **Übungsplan** mit Rhythmus und optionalem Zeitraum; mehrere Pläne, Versand an eine E-Mail (Annehmen in der App)
 - **Beschwerden** mit passenden Übungsvorschlägen
 - **Heute-Ansicht** mit Serie, ohne Schuldgefühl beim Auslassen
 
@@ -35,7 +35,7 @@ Vercel-Projektname **i-am-super-fit**, weil `i-am-fit` schon vergeben war. Pushe
 ### Supabase (Geräte-Sync)
 
 1. Neues Projekt auf [supabase.com](https://supabase.com) anlegen.
-2. SQL-Editor öffnen und `supabase/setup.sql` vollständig ausführen (Schema + Katalog).
+2. SQL-Editor öffnen und `supabase/setup.sql` vollständig ausführen (Schema + Katalog). Nach Schema-Änderungen (z. B. mehrere Pläne / Einladungen) die Datei erneut ausführen.
 3. Unter **Authentication → URL configuration**:
    - Site URL = `https://i-am-super-fit.vercel.app`
    - Redirect URLs: `https://i-am-super-fit.vercel.app/auth/callback`

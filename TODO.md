@@ -33,6 +33,9 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] README zu Nutzung, Vercel und Supabase
 - [x] Projektplan-Datei anlegen
 - [x] Todo-Liste anlegen (Punkte nur abhaken, nicht löschen)
+- [x] Mehrere benannte Übungspläne (eigene und empfangene), einer davon aktiv für Heute
+- [x] Urheber sichtbar (Name/E-Mail der Person, die den Plan erstellt oder geschickt hat)
+- [x] Plan per E-Mail einladen: Inbox in der App, Annehmen als Kopie, Ablehnen; ohne Cloud klarer Hinweis
 
 ## Qualität und Betrieb
 
@@ -42,6 +45,7 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] `npm test` und `npm run lint` in der CI bzw. vor jedem Merge grün halten
 - [x] Tests für Plan-Logik, Repository-Schalter (lokal/Cloud) und kritische UI-Pfade
 - [x] Fehlerfälle beim Import klarer machen (ungültiger Link, fehlende Metadaten)
+- [x] Tests für Plan-Einladung annehmen (Snapshot, Attribution, keine anderen Pläne überschreiben)
 
 ## Erinnerungen und Offline (Phase B)
 

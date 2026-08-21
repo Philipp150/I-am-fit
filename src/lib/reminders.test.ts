@@ -45,11 +45,13 @@ describe("reminders", () => {
       displayName: "",
       reminderEnabled: true,
       reminderTime: "08:30",
+      activePlanId: "plan-1",
       createdAt: "2026-08-01T00:00:00.000Z",
     };
     const items: PlanItem[] = [
       {
         id: "p1",
+        planId: "plan-1",
         exerciseId: "ex-a",
         enabled: true,
         reminderTime: "12:00",
@@ -58,6 +60,7 @@ describe("reminders", () => {
       },
       {
         id: "p2",
+        planId: "plan-1",
         exerciseId: "ex-a",
         enabled: true,
         reminderTime: "18:00",

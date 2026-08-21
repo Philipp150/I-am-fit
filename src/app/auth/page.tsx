@@ -37,7 +37,7 @@ export default function AuthPage() {
     <div className="space-y-4">
       <h2 className="font-display text-3xl text-forest-dark">Anmelden</h2>
       <p className="text-sm leading-relaxed text-ink/80">
-        Ein Link per E-Mail reicht. Danach sind Plan und eigene Übungen auf PC und Handy dieselben.
+        Ein Link per E-Mail reicht. Danach sind Plan und eigene Übungen auf PC und Handy dieselben. Einladungen zu Plänen siehst du nach der Anmeldung unter Plan → Empfangen.
       </p>
       {sent ? (
         <Card>

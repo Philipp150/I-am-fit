@@ -58,6 +58,7 @@ export default function ProgressPage() {
         displayName: "",
         reminderEnabled: true,
         reminderTime: "08:30",
+        activePlanId: null,
         createdAt: new Date().toISOString(),
       }
     );
@@ -130,12 +131,22 @@ export default function ProgressPage() {
   return (
     <div className="space-y-5">
       <h2 className="font-display text-3xl text-forest-dark">Verlauf</h2>
+      <p className="text-sm">
+        <Link href="/plan" className="text-forest underline">
+          Pläne und Einladungen
+        </Link>
+      </p>
       {isCloudEnabled() && (
         <Card>
           <h3 className="font-display text-xl">Konto</h3>
           {session ? (
             <>
               <p className="mt-2 text-sm">Angemeldet{session.email ? ` als ${session.email}` : ""}. Plan und eigene Übungen liegen in Supabase und sind auf PC und Handy gleich.</p>
+              <p className="mt-2 text-sm">
+                <Link href="/plan" className="underline">
+                  Pläne und Einladungen
+                </Link>
+              </p>
               <SecondaryButton className="mt-3" onClick={() => signOut()}>
                 Abmelden
               </SecondaryButton>

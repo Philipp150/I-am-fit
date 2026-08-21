@@ -22,7 +22,7 @@ Quellcode: dieses Repository (`schlag-art/philipp150-I-am-fit`, Ursprung [github
 | --- | --- |
 | **Heute** | Fällige Plan-Übungen, Serie, Einstieg mit drei Ankern |
 | **Sammlung** | Hierarchische Kategorien, Tags, Katalog und eigene Übungen |
-| **Plan** | Rhythmus (täglich, Wochentage, Wochenende, bestimmte Tage, alle *n* Tage), optionaler Zeitraum |
+| **Plan** | Mehrere Pläne (eigene und empfangene), Rhythmus, optionaler Zeitraum, aktiver Plan für Heute, Versand per E-Mail |
 | **Beschwerden** | Symptom-Auswahl mit Vorschlägen aus dem Katalog |
 | **Import** | YouTube- oder Instagram-Link → Titel/Beschreibung → eine oder mehrere Übungen als Strichfigur |
 | **Verlauf** | 28-Tage-Raster, letzte Completions, Anzeigename |
@@ -51,7 +51,9 @@ Vercel   │ Hosting, Import-API (/api/import)
 | PWA | `src/app/manifest.ts`, Raster-Icons 192/512, `public/sw.js` (Offline-Cache für App-Shell und Katalog) |
 | Native Hülle | Capacitor 7 (`capacitor.config.ts`, App-ID `art.schlag.iamfit`); `android/` und `ios/` laden `https://i-am-super-fit.vercel.app`, damit Import-API und Auth erreichbar bleiben. |
 
-Datenmodell (Kern): `Category`, `Complaint`, `Exercise` (Schritte + Pose-IDs), `PlanItem`, `Completion`, `Profile`. Erinnerungen (`reminderEnabled`, `reminderTime`, optional `PlanItem.reminderTime`) werden in Verlauf/Plan gesetzt und lösen lokale bzw. Web-Push-Notifications aus, solange die App oder die installierte PWA erreichbar ist.
+Datenmodell (Kern): `Category`, `Complaint`, `Exercise` (Schritte + Pose-IDs), `TrainingPlan` (mehrere Pläne pro Person, mit Urheber), `PlanItem` (gehört zu einem Plan), `PlanInvite` (Einladung per E-Mail), `Completion`, `Profile` (`activePlanId`). Erinnerungen (`reminderEnabled`, `reminderTime`, optional `PlanItem.reminderTime`) werden in Verlauf/Plan gesetzt und lösen lokale bzw. Web-Push-Notifications aus, solange die App oder die installierte PWA erreichbar ist.
+
+Pläne können von einer anderen Person (z. B. Physiotherapie) zusammengestellt und an eine E-Mail geschickt werden. Die empfangende Person nimmt die Einladung in der App an; der bisherige Plan bleibt. Teilen braucht Cloud/Auth (Supabase). Ohne Cloud bleiben mehrere eigene Pläne lokal nutzbar.
 
 ## 4. Betrieb
 
@@ -102,6 +104,7 @@ Neue Arbeit wird **unten in TODO.md angehängt**. Fertiges wird dort nur abgehak
 - Capacitor `webDir` ist `out` und nur Fallback; Store-Builds laden die gehostete Next.js-App (`server.url`), sonst fehlen API-Routen.
 - Erinnerungen brauchen eine Notification-Erlaubnis und eine geöffnete oder installierte App; ohne Push-Server gibt es keine Zustellung bei komplett geschlossenem Browser.
 - Cloud und lokaler Dexie-Stand bleiben getrennte Speicher; die Übernahme ins Konto liegt unter Verlauf.
+- Plan-Einladungen liegen in `plan_invites`. Eine eigene Plan-Mail gibt es nicht; optional geht der bestehende Magic-Link an die Empfängeradresse. Quelle der Wahrheit ist Annehmen/Ablehnen in der App.
 
 ## 7. Dokumentation
 

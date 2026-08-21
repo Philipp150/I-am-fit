@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { PosePlayer } from "@/components/PosePlayer";
 import { Card, KindBadge, PrimaryButton, SecondaryButton } from "@/components/ui";
 import { categoryPathLabel } from "@/lib/categories";
-import { useCategories, useComplaints, useExercise, usePlanItems } from "@/lib/hooks";
+import { useCategories, useComplaints, useExercise, usePlanItems, useActivePlan } from "@/lib/hooks";
 import { addExerciseToPlan } from "@/lib/plan";
 import { formatDuration, rhythmLabel } from "@/lib/schedule";
 import { deleteExercise } from "@/lib/repository";
@@ -17,7 +17,9 @@ export default function ExerciseDetailPage() {
   const categories = useCategories();
   const complaints = useComplaints();
   const planItems = usePlanItems();
+  const activePlan = useActivePlan();
   const inPlan = planItems.some((item) => item.exerciseId === exercise?.id && item.enabled);
+  const receivedActive = activePlan?.source === "received";
 
   if (!exercise) {
     return <p className="text-forest-light">Übung wird geladen …</p>;
@@ -89,7 +91,13 @@ export default function ExerciseDetailPage() {
         <Link href={`/practice/${exercise.id}`} className="rounded-full bg-clay py-3 text-center text-sm text-cream">
           Jetzt anleiten lassen
         </Link>
-        <PrimaryButton onClick={addToPlan}>{inPlan ? "Rhythmus im Plan aktualisieren" : "In den Plan aufnehmen"}</PrimaryButton>
+        <PrimaryButton onClick={addToPlan} disabled={receivedActive}>
+          {receivedActive
+            ? "Aktiver Plan ist empfangen (nur lesen)"
+            : inPlan
+              ? "Rhythmus im Plan aktualisieren"
+              : "In den Plan aufnehmen"}
+        </PrimaryButton>
         {!exercise.isSystem && (
           <SecondaryButton onClick={remove}>Eigene Übung löschen</SecondaryButton>
         )}

@@ -5,6 +5,7 @@ import type { PlanItem } from "./types";
 function item(partial: Partial<PlanItem> & Pick<PlanItem, "rhythm">): PlanItem {
   return {
     id: "p1",
+    planId: "plan-1",
     exerciseId: "e1",
     enabled: true,
     createdAt: "2026-08-01T00:00:00.000Z",
