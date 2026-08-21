@@ -9,6 +9,10 @@ describe("catalog integrity", () => {
       expect(POSE_LABELS[id]).toBeTruthy();
       expect(POSES[id].jaw).toEqual(expect.any(Number));
       expect(POSES[id].leftHand).toEqual(expect.any(Number));
+      expect(POSES[id].shoulderLift).toEqual(expect.any(Number));
+      expect(POSES[id].headShiftX).toEqual(expect.any(Number));
+      expect(POSES[id].headShiftY).toEqual(expect.any(Number));
+      expect(POSES[id].chest).toEqual(expect.any(Number));
     }
   });
   it("references only known categories, complaints and poses", () => {
@@ -33,11 +37,22 @@ describe("catalog integrity", () => {
     const byId = new Map(CATALOG_EXERCISES.map((item) => [item.id, item]));
     const poses = (id: string) => byId.get(id)?.steps.map((step) => step.pose) ?? [];
     expect(poses("ex-walk-attention")).toContain("walkLeft");
+    expect(poses("ex-walk-attention")).toContain("walkRight");
     expect(poses("ex-wrist-circles")).toContain("wristsFlex");
-    expect(poses("ex-jaw-release")).toContain("jawSoft");
+    expect(poses("ex-jaw-release")).toEqual(expect.arrayContaining(["jawSoft", "jawLeft", "jawRight"]));
     expect(poses("ex-eye-rest")).toContain("gazeFar");
     expect(poses("ex-pelvic-tilt")).toContain("pelvicTuck");
     expect(poses("ex-shoulder-dump")).toContain("shrug");
-    expect(poses("ex-neck-circles")).toEqual(expect.arrayContaining(["neckLeft", "neckRight"]));
+    expect(poses("ex-neck-circles")).toEqual(
+      expect.arrayContaining(["neckLeft", "neckRight", "neckForward", "neckBack"]),
+    );
+    expect(poses("ex-shoulder-rolls")).toContain("shoulderForward");
+    expect(poses("ex-warrior")).toContain("warriorOther");
+    expect(poses("ex-hip-open")).toContain("hipOpenOther");
+    expect(poses("ex-calf-stretch")).toEqual(expect.arrayContaining(["calfWall", "calfWallOther"]));
+    expect(poses("ex-desk-break")).toEqual(expect.arrayContaining(["standInhale", "standExhale"]));
+    expect(poses("ex-desk-break")).not.toContain("breatheIn");
+    expect(poses("ex-478")).toEqual(expect.arrayContaining(["lieInhale", "lieHold", "lieExhale"]));
+    expect(poses("ex-body-scan")).not.toContain("breathe");
   });
 });

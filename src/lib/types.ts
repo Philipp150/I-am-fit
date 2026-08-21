@@ -39,7 +39,21 @@ export type PoseId =
   | "treeOther"
   | "lungeOther"
   | "breatheIn"
-  | "breatheOut";
+  | "breatheOut"
+  | "neckForward"
+  | "neckBack"
+  | "jawLeft"
+  | "jawRight"
+  | "warriorOther"
+  | "hipOpenOther"
+  | "calfWall"
+  | "calfWallOther"
+  | "shoulderForward"
+  | "standInhale"
+  | "standExhale"
+  | "lieInhale"
+  | "lieHold"
+  | "lieExhale";
 
 export type RhythmKind = "daily" | "weekdays" | "weekends" | "days" | "every_n_days";
 

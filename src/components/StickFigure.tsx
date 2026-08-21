@@ -23,6 +23,12 @@ type Props = {
 export function StickFigure({ pose, className, accent = "#D97657" }: Props) {
   const angles = typeof pose === "string" ? POSES[pose] ?? POSES.stand : pose;
   const jaw = angles.jaw ?? 0;
+  const shoulderLift = angles.shoulderLift ?? 0;
+  const headShiftX = angles.headShiftX ?? 0;
+  const headShiftY = angles.headShiftY ?? 0;
+  const chest = angles.chest ?? 0;
+  const chestScale = 1 + chest * 0.012;
+  const shoulderY = -TORSO - shoulderLift;
 
   return (
     <svg viewBox="0 0 200 280" className={className} aria-hidden="true">
@@ -31,7 +37,7 @@ export function StickFigure({ pose, className, accent = "#D97657" }: Props) {
         <Leg side={-1} thigh={angles.leftThigh} shin={angles.leftShin} accent={accent} />
         <Leg side={1} thigh={angles.rightThigh} shin={angles.rightShin} accent={accent} />
 
-        <g transform={`rotate(${angles.torso})`}>
+        <g transform={`rotate(${angles.torso}) scale(${chestScale} 1)`}>
           <path
             d={`M ${-HIP_W - 2} 6
                 C ${-HIP_W - 6} -18, ${-SHOULDER_W - 2} -${TORSO - 18}, ${-SHOULDER_W} -${TORSO}
@@ -46,12 +52,32 @@ export function StickFigure({ pose, className, accent = "#D97657" }: Props) {
           <ellipse cx="0" cy="2" rx="16" ry="9" fill="#FFFBF4" stroke="#1F3F37" strokeWidth="3" />
           <Joint r={6.5} accent={accent} />
 
+          <line
+            x1={-6}
+            y1={-TORSO + 6}
+            x2={-SHOULDER_W}
+            y2={shoulderY}
+            stroke="#1F3F37"
+            strokeWidth="7"
+            strokeLinecap="round"
+          />
+          <line
+            x1={6}
+            y1={-TORSO + 6}
+            x2={SHOULDER_W}
+            y2={shoulderY}
+            stroke="#1F3F37"
+            strokeWidth="7"
+            strokeLinecap="round"
+          />
+
           <Arm
             side={-1}
             upper={angles.leftUpperArm}
             fore={angles.leftForearm}
             hand={angles.leftHand ?? 0}
             accent={accent}
+            shoulderY={shoulderY}
           />
           <Arm
             side={1}
@@ -59,6 +85,7 @@ export function StickFigure({ pose, className, accent = "#D97657" }: Props) {
             fore={angles.rightForearm}
             hand={angles.rightHand ?? 0}
             accent={accent}
+            shoulderY={shoulderY}
           />
 
           <g transform={`translate(0 ${-TORSO}) rotate(${angles.neck})`}>
@@ -72,7 +99,7 @@ export function StickFigure({ pose, className, accent = "#D97657" }: Props) {
               strokeLinecap="round"
             />
             <Joint r={4.5} accent={accent} />
-            <g transform={`translate(0 ${-NECK - 18})`}>
+            <g transform={`translate(${headShiftX} ${-NECK - 18 + headShiftY})`}>
               <ellipse rx="15" ry="18.5" fill="#FFFBF4" stroke="#1F3F37" strokeWidth="3.2" />
               <ellipse cx="-5.5" cy="-2" rx="1.7" ry="2.2" fill="#1F3F37" />
               <ellipse cx="5.5" cy="-2" rx="1.7" ry="2.2" fill="#1F3F37" />
@@ -158,15 +185,17 @@ function Arm({
   fore,
   hand,
   accent,
+  shoulderY,
 }: {
   side: -1 | 1;
   upper: number;
   fore: number;
   hand: number;
   accent: string;
+  shoulderY: number;
 }) {
   return (
-    <g transform={`translate(${side * SHOULDER_W} ${-TORSO}) rotate(${upper})`}>
+    <g transform={`translate(${side * SHOULDER_W} ${shoulderY}) rotate(${upper})`}>
       <Joint r={5.8} accent={accent} />
       <Bone length={UPPER} weight={9.5} />
       <g transform={`translate(0 ${UPPER}) rotate(${fore})`}>
@@ -174,7 +203,16 @@ function Arm({
         <Bone length={FORE} weight={8.5} />
         <g transform={`translate(0 ${FORE}) rotate(${hand})`}>
           <Joint r={4.4} accent={accent} />
-          <line x1="0" y1="0" x2="0" y2={HAND} stroke="#1F3F37" strokeWidth="7" strokeLinecap="round" />
+          <line x1="0" y1="0" x2="0" y2={HAND} stroke="#1F3F37" strokeWidth="7.2" strokeLinecap="round" />
+          <line
+            x1="0"
+            y1="2"
+            x2={side * 7}
+            y2={HAND - 3}
+            stroke="#1F3F37"
+            strokeWidth="4.6"
+            strokeLinecap="round"
+          />
         </g>
       </g>
     </g>

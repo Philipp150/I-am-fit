@@ -56,34 +56,194 @@ const COMPLAINT_KEYWORDS: Array<{ id: string; pattern: RegExp }> = [
   { id: "comp-focus", pattern: /fokus|konzentration|zerstreut/i },
 ];
 
-const POSE_KEYWORDS: Array<{ pose: PoseId; pattern: RegExp }> = [
-  { pose: "jawSoft", pattern: /kiefer|jaw|zähne|zunge|kafer/i },
-  { pose: "gazeFar", pattern: /ferne|auge|blick|20-20-20|blinzeln/i },
-  { pose: "wristsFlex", pattern: /handgelenk|wrist|hand kreis/i },
-  { pose: "walkLeft", pattern: /gehen|laufen|walk|schritt/i },
-  { pose: "shrug", pattern: /schultern hoch|shrug|schultern abladen|schultern fallen/i },
-  { pose: "pelvicTuck", pattern: /beckenkipp|pelvic tilt|becken kippen/i },
-  { pose: "fold", pattern: /vorbeuge|forward fold|fold/i },
-  { pose: "squat", pattern: /kniebeuge|squat/i },
-  { pose: "lunge", pattern: /ausfall|lunge/i },
-  { pose: "plank", pattern: /plank|stütze|unterarmstütz/i },
-  { pose: "cobra", pattern: /cobra|bhujang|rückbeuge/i },
-  { pose: "child", pattern: /kindeshaltung|child/i },
+type PoseRule = {
+  pose: PoseId;
+  pattern: RegExp;
+  exclude?: RegExp;
+};
+
+const POSE_KEYWORDS: PoseRule[] = [
+  { pose: "jawSoft", pattern: /\b(kiefer|jaw|zähne|zaehne|zunge)\b/i },
+  { pose: "gazeFar", pattern: /\b(ferne|auge(?:n)?|blick|blinzeln|20[-\s]?20[-\s]?20)\b/i },
+  {
+    pose: "wristsFlex",
+    pattern: /\b(handgelenk(?:e)?|wrist(?:s)?|hände?\s+kreis|hand\s+kreis)\b/i,
+  },
+  {
+    pose: "walkLeft",
+    pattern: /\b(gehen|laufen|walking|spazier(?:gang|en)?)\b|\bwalk(?:ing)?\b/i,
+    exclude: /\b(walkthrough|walk-through|walk through)\b/i,
+  },
+  {
+    pose: "shrug",
+    pattern: /\bshrug\b|schultern?\s*(hoch(?:ziehen)?|abladen|fallen\s*lassen)|schulter(?:n)?\s+zu den ohren/i,
+    exclude: /nicht\s+(hoch|shrug|anheben)|don'?t\s+shrug|schultern?\s+nicht|ohne die schultern/i,
+  },
+  { pose: "shoulderForward", pattern: /schulterkreis|shoulder\s*roll|schultern?\s*(vorn|kreisen|rollen)/i },
+  { pose: "pelvicTuck", pattern: /beckenkipp|pelvic\s*tilt|becken\s*kippen/i },
+  { pose: "fold", pattern: /vorbeuge|forward\s*fold|uttanasana/i },
+  { pose: "squat", pattern: /kniebeuge|\bsquat/i },
+  { pose: "calfWall", pattern: /\b(wade|waden|calf|fersenstand)\b/i },
+  { pose: "lunge", pattern: /ausfallschritt|\blunge\b|hüftbeuger/i },
+  { pose: "plank", pattern: /\bplank\b|stütze|unterarmstütz/i },
+  { pose: "cobra", pattern: /\bcobra\b|bhujang|rückbeuge/i },
+  { pose: "child", pattern: /kindeshaltung|child'?s?\s*pose|balasana/i },
   { pose: "cat", pattern: /katze|cat.?cow|marjary/i },
-  { pose: "cow", pattern: /kuh|bitilas/i },
-  { pose: "twist", pattern: /dreh|twist/i },
-  { pose: "sit", pattern: /sitz|sit/i },
-  { pose: "breathe", pattern: /atmung|breath/i },
-  { pose: "neckLeft", pattern: /nacken/i },
-  { pose: "neckTilt", pattern: /hals/i },
-  { pose: "lie", pattern: /liegen|savasana|leichen/i },
-  { pose: "warrior", pattern: /krieger|warrior/i },
-  { pose: "tree", pattern: /baum|tree pose/i },
-  { pose: "hipOpen", pattern: /hüfte|pigeon|taube/i },
-  { pose: "chestOpen", pattern: /brust|chest/i },
+  { pose: "cow", pattern: /\bkuh\b|bitilas/i },
+  { pose: "twist", pattern: /dreh(?:ung|en)|twis[dt]/i },
+  { pose: "breathe", pattern: /atmung|pranayama|boxatmung|einatmen|ausatmen|\bbreath/i },
+  {
+    pose: "neckLeft",
+    pattern: /\b(nacken|halswirbel|neck\s*(?:stretch|roll|tilt|circle)|nackenkreis|seitneig)/i,
+  },
+  { pose: "lie", pattern: /liegen|savasana|leichen|rückenlage/i },
+  { pose: "warrior", pattern: /krieger|\bwarrior\b/i },
+  { pose: "tree", pattern: /\bbaum\b|tree\s*pose|vrksasana/i },
+  { pose: "hipOpen", pattern: /hüfte|pigeon|taube|hüftöffner/i },
+  { pose: "chestOpen", pattern: /brustöffner|brustkorb|chest\s*opener|schulterblatt/i },
   { pose: "heart", pattern: /mantra|herz|affirmation/i },
-  { pose: "reachUp", pattern: /strecken|reach|arme hoch/i },
+  { pose: "reachUp", pattern: /strecken|arme\s+hoch|reach\s*up|morgenstreck/i },
+  { pose: "sit", pattern: /\b(sitzen|sitzend|im sitz|seated|sitting)\b/i },
 ];
+
+type Laterality = "left" | "right" | "both" | null;
+
+function detectLaterality(text: string): Laterality {
+  const left = /\b(links|linke[rsn]?|left)\b/i.test(text);
+  const right = /\b(rechts|rechte[rsn]?|right)\b/i.test(text);
+  if (left && right) return "both";
+  if (/beide(?:n)?\s+seiten|seitenwechsel|andere seite|other side/i.test(text)) return "both";
+  if (left) return "left";
+  if (right) return "right";
+  return null;
+}
+
+function matchPoses(text: string): PoseId[] {
+  const found: Array<{ index: number; pose: PoseId }> = [];
+  for (const rule of POSE_KEYWORDS) {
+    if (rule.exclude?.test(text)) continue;
+    const match = text.match(rule.pattern);
+    if (!match || match.index == null) continue;
+    found.push({ index: match.index, pose: rule.pose });
+  }
+  found.sort((a, b) => a.index - b.index);
+  const unique: PoseId[] = [];
+  for (const item of found) {
+    if (!unique.includes(item.pose)) unique.push(item.pose);
+  }
+  return unique;
+}
+
+function withSides(pose: PoseId, side: Laterality): PoseId[] {
+  if (pose === "neckLeft" || pose === "neckRight" || pose === "neckTilt") {
+    if (side === "left") return ["neckLeft"];
+    if (side === "right") return ["neckRight"];
+    return ["neckLeft", "neckForward", "neckRight", "neckBack"];
+  }
+  if (pose === "walkLeft" || pose === "walkRight") {
+    return ["walkLeft", "walkRight"];
+  }
+  if (pose === "lunge" || pose === "lungeOther") {
+    if (side === "left") return ["lungeOther"];
+    if (side === "right") return ["lunge"];
+    return ["lunge", "lungeOther"];
+  }
+  if (pose === "warrior" || pose === "warriorOther") {
+    if (side === "left") return ["warriorOther"];
+    if (side === "right") return ["warrior"];
+    return ["warrior", "warriorOther"];
+  }
+  if (pose === "tree" || pose === "treeOther") {
+    if (side === "left") return ["tree"];
+    if (side === "right") return ["treeOther"];
+    return ["tree", "treeOther"];
+  }
+  if (pose === "twist" || pose === "twistOther") {
+    if (side === "left") return ["twist"];
+    if (side === "right") return ["twistOther"];
+    return ["twist", "twistOther"];
+  }
+  if (pose === "hipOpen" || pose === "hipOpenOther") {
+    if (side === "left") return ["hipOpenOther"];
+    if (side === "right") return ["hipOpen"];
+    return ["hipOpen", "hipOpenOther"];
+  }
+  if (pose === "calfWall" || pose === "calfWallOther") {
+    if (side === "left") return ["calfWallOther"];
+    if (side === "right") return ["calfWall"];
+    return ["calfWall", "calfWallOther"];
+  }
+  if (pose === "jawSoft" || pose === "jawLeft" || pose === "jawRight") {
+    return ["jawSoft", "jawLeft", "jawRight"];
+  }
+  if (pose === "wristsFlex" || pose === "wristsExtend") {
+    return ["wristsFlex", "wristsExtend", "shakeOut"];
+  }
+  if (pose === "shrug" || pose === "shoulderForward") {
+    return ["shoulderForward", "shrug", "chestOpen", "shouldersDown"];
+  }
+  if (pose === "breathe" || pose === "breatheIn" || pose === "breatheOut") {
+    return ["sit", "breatheIn", "breatheOut"];
+  }
+  return [pose];
+}
+
+function restPoseFor(pose: PoseId): PoseId {
+  if (
+    [
+      "sit",
+      "jawSoft",
+      "jawLeft",
+      "jawRight",
+      "twist",
+      "twistOther",
+      "hipOpen",
+      "hipOpenOther",
+      "breathe",
+      "breatheIn",
+      "breatheOut",
+      "gazeFar",
+    ].includes(pose)
+  ) {
+    return "sit";
+  }
+  if (
+    ["lie", "lieInhale", "lieHold", "lieExhale", "kneesUp", "pelvicTuck", "pelvicArch"].includes(pose)
+  ) {
+    return "lie";
+  }
+  return "stand";
+}
+
+function sequenceFor(poses: PoseId[], text: string): PoseId[] {
+  const side = detectLaterality(text);
+  if (poses.length === 0) {
+    const kind = guessKind(text);
+    if (kind === "mantra") return ["heart", "stand", "heart"];
+    if (kind === "breath") return ["sit", "breatheIn", "breatheOut", "sit"];
+    if (kind === "mind") return ["sit", "gazeFar", "sit"];
+    return ["stand", "reachUp", "fold", "stand"];
+  }
+  if (poses.length === 1) {
+    const motion = withSides(poses[0], side);
+    const rest = restPoseFor(poses[0]);
+    if (motion[0] === rest) return motion.slice(0, 6);
+    if (["child", "plank", "cobra", "cat", "cow"].includes(poses[0])) return motion.slice(0, 6);
+    return [rest, ...motion].slice(0, 8);
+  }
+  const expanded = poses.flatMap((pose) => {
+    if (poses.length >= 3) {
+      const pair = withSides(pose, side);
+      return pair.length <= 2 ? pair : [pose];
+    }
+    return withSides(pose, side).slice(0, 2);
+  });
+  const unique: PoseId[] = [];
+  for (const pose of expanded) {
+    if (unique[unique.length - 1] !== pose) unique.push(pose);
+  }
+  return unique.slice(0, 8);
+}
 
 export type ImportErrorCode =
   | "empty_url"
@@ -226,18 +386,10 @@ export function guessComplaintIds(text: string): string[] {
   return COMPLAINT_KEYWORDS.filter((entry) => entry.pattern.test(text)).map((entry) => entry.id);
 }
 
-export function guessPoses(text: string): PoseId[] {
-  const poses = POSE_KEYWORDS.filter((entry) => entry.pattern.test(text)).map((entry) => entry.pose);
-  const unique = [...new Set(poses)];
-  if (unique.length === 0) {
-    const kind = guessKind(text);
-    if (kind === "mantra") return ["heart", "stand", "heart"];
-    if (kind === "breath") return ["sit", "breatheIn", "breatheOut", "sit"];
-    if (kind === "mind") return ["sit", "gazeFar", "sit"];
-    return ["stand", "reachUp", "fold", "stand"];
-  }
-  if (unique.length === 1) return [unique[0], "stand", unique[0]];
-  return unique.slice(0, 6);
+export function guessPoses(text: string, fallbackText = ""): PoseId[] {
+  const fromPrimary = matchPoses(text);
+  const source = fromPrimary.length > 0 ? text : `${text}\n${fallbackText}`.trim();
+  return sequenceFor(matchPoses(source), source);
 }
 
 export function suggestedRhythmFor(kind: ExerciseKind, text: string): SuggestedRhythm {
@@ -322,7 +474,7 @@ export function deriveExercisesFromMeta(meta: ImportMeta): DraftExercise[] {
   return items.map((itemTitle) => {
     const text = `${itemTitle}\n${blob}`;
     const kind = guessKind(text);
-    const poses = guessPoses(text);
+    const poses = guessPoses(itemTitle, blob);
     return {
       title: itemTitle.slice(0, 80),
       summary:

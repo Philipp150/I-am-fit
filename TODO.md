@@ -93,3 +93,11 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] Import liest oEmbed, HTML-Meta und öffentliche YouTube-Untertitel/Beschreibung für bessere Schritte
 - [x] Unit-Tests für YouTube-URL → Embed-ID; Import-Parse bleibt grün
 - [x] UI ehrlich: öffentlich verfügbare Texte, danach unsere Figur; Original nur zusätzlich
+
+## Gliederpuppe und Video-Absicht (ohne Pose-Estimation)
+
+- [x] Katalog-Posen an die Übungsabsicht anpassen: Nackenkreis (vorn/seit/hinten), Schulterkreis (vorn-hoch-hinten-unten), Kiefer links/rechts, Gehen mit wechselseitigem Schritt, Laterality bei Krieger/Hüfte/Wade
+- [x] Stehen/Liegen/Sitzen nicht mehr vertauschen (Bildschirmpause atmet im Stand; 4-7-8 und Bodyscan bleiben liegen)
+- [x] Import-Targeting: Titel und Schritttext steuern die Pose; „Schritt 1“ ist kein Gehen; „Schultern nicht hochziehen“ ist kein Shrug
+- [x] PosePlayer bleibt primär; YouTube bleibt Click-to-Play und treibt die Figur nicht
+- [x] Tests für Posen, Katalog-Schritte und Import-Zuordnung; CaptionTrack-`null`-Bug nicht wieder eingeführt

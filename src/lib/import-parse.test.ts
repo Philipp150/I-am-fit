@@ -5,6 +5,7 @@ import {
   detectProvider,
   extractNumberedItems,
   guessKind,
+  guessPoses,
   hasUsableMeta,
   isSupportedSourceUrl,
   validateSourceUrl,
@@ -67,6 +68,16 @@ describe("import parsing", () => {
     expect(drafts[0].source.provider).toBe("youtube");
     expect(drafts[0].source.thumbnailUrl).toContain("hqdefault");
     expect(drafts[1].title).toBe("Nacken neigen");
+    expect(drafts[0].steps.map((step) => step.pose)).toEqual(
+      expect.arrayContaining(["shrug", "shouldersDown"]),
+    );
+    expect(drafts[1].steps.map((step) => step.pose)).toEqual(
+      expect.arrayContaining(["neckLeft", "neckRight"]),
+    );
+    expect(drafts[1].steps.some((step) => step.pose === "shrug")).toBe(false);
+    expect(drafts[2].steps.map((step) => step.pose)).toEqual(
+      expect.arrayContaining(["jawSoft", "jawLeft", "jawRight"]),
+    );
   });
 
   it("composes oembed title, author and thumbnail over page meta", () => {
@@ -100,5 +111,45 @@ describe("import parsing", () => {
     expect(drafts[0].complaintIds).toContain("comp-neck");
     expect(drafts[0].categoryIds).toContain("cat-neck");
     expect(guessKind("Box Breathing 4-4-4-4")).toBe("breath");
+    expect(drafts[0].steps.some((step) => step.pose === "shrug")).toBe(false);
+    expect(drafts[0].steps.map((step) => step.pose)).toEqual(
+      expect.arrayContaining(["neckLeft", "neckRight"]),
+    );
+  });
+
+  it("does not treat numbered Schritt lists as walking", () => {
+    expect(guessPoses("Schritt 1: aufrecht stehen. Schritt 2: atmen.")).not.toContain("walkLeft");
+  });
+
+  it("keeps a neck stretch on neck poses even if the video text mentions shoulders", () => {
+    const poses = guessPoses(
+      "Nacken dehnen gegen Verspannungen",
+      "Schultern nicht hochziehen. Kopf zur Seite neigen. Langsam kreisen.",
+    );
+    expect(poses).toEqual(expect.arrayContaining(["neckLeft", "neckRight"]));
+    expect(poses).not.toContain("shrug");
+    expect(poses).not.toContain("walkLeft");
+  });
+
+  it("does not shrug when the cue is to keep the shoulders down", () => {
+    expect(guessPoses("Nacken neigen. Schultern nicht hochziehen.")).not.toContain("shrug");
+  });
+
+  it("animates walking from gehen, not from a standing default", () => {
+    const poses = guessPoses("Zwei Minuten achtsam gehen");
+    expect(poses).toEqual(expect.arrayContaining(["walkLeft", "walkRight"]));
+    expect(poses[0]).toBe("stand");
+  });
+
+  it("moves the jaw instead of freezing the head for a Kiefer video", () => {
+    expect(guessPoses("Kiefer locker lassen")).toEqual(
+      expect.arrayContaining(["jawSoft", "jawLeft", "jawRight"]),
+    );
+  });
+
+  it("shows both sides for a lunge that names a side change", () => {
+    expect(guessPoses("Ausfallschritt, dann die andere Seite")).toEqual(
+      expect.arrayContaining(["lunge", "lungeOther"]),
+    );
   });
 });
