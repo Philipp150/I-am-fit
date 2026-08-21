@@ -24,6 +24,7 @@ Die kostenlosen Pläne (Vercel Hobby, Supabase Free) reichen für den Start.
 - **Übungsplan** mit Rhythmus und optionalem Zeitraum
 - **Beschwerden** mit passenden Übungsvorschlägen
 - **Heute-Ansicht** mit Serie, ohne Schuldgefühl beim Auslassen
+- **Originalvideo (zusätzlich)**: YouTube nach Tipp auf „Video ansehen“ (youtube-nocookie); Instagram als Link plus Thumbnail, wenn vorhanden. Die Anleitung mit Schritten und App-Figur bleibt die Hauptansicht.
 
 ## Hosting (ohne lokales npm)
 
@@ -103,3 +104,9 @@ Wenn du zuerst lokal geübt hast und dich später anmeldest, kannst du den Dexie
 ## Hinweis zum Import
 
 YouTube und Instagram liefern Metadaten, keine vollständige Videoanalyse. Die App zeigt nur die eigene Figur. Prüfe Vorschläge vor dem Speichern.
+
+## Originalvideo und „Mitlesen“ beim Import
+
+Import liest weiterhin nur öffentlich verfügbare Texte: oEmbed (Titel, Kanal, Thumbnail), HTML-Meta und – bei YouTube – Beschreibung sowie Untertitel/Timedtext, wenn die öffentliche Seite sie hergibt. Keine API-Keys, keine Frame-Analyse, keine Behauptung, die App hätte das Video „gesehen“.
+
+Die **Anleitung** (Schritte + App-Figur / PosePlayer) bleibt die Hauptansicht („Zur Anleitung“). Das **Originalvideo** ist ein kompakter Zusatzplayer („Originalvideo (zusätzlich)“), Click-to-Play, damit YouTube nicht ungefragt Cookies setzt. Instagram wird nicht zuverlässig eingebettet; dort gibt es „Auf Instagram öffnen“ und optional das og-Thumbnail. Andere Web-Links öffnen im Browser.

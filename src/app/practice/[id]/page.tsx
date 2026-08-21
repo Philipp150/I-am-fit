@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { PosePlayer } from "@/components/PosePlayer";
+import { SourceVideo } from "@/components/SourceVideo";
 import { PrimaryButton, SecondaryButton } from "@/components/ui";
 import { useExercise } from "@/lib/hooks";
 import { markComplete, markSkipped } from "@/lib/plan";
@@ -39,17 +40,21 @@ function PracticeInner() {
       </Link>
       <h2 className="font-display text-3xl text-forest-dark">{exercise.title}</h2>
       <p className="text-sm text-forest-light">{formatDuration(exercise.defaultDurationSec)}</p>
-      <PosePlayer
-        key={run}
-        steps={exercise.steps}
-        loop={false}
-        onFinished={() => setEnded(true)}
-      />
+      <section className="space-y-3">
+        <p className="text-xs uppercase tracking-[0.18em] text-forest-light">Zur Anleitung</p>
+        <PosePlayer
+          key={run}
+          steps={exercise.steps}
+          loop={false}
+          onFinished={() => setEnded(true)}
+        />
+      </section>
       {ended && (
         <p className="rounded-2xl bg-sage/40 px-4 py-3 text-sm text-forest-dark" role="status">
           Die Anleitung ist zu Ende. Wiederholen, wenn du magst – oder den Tag ohne Schuldgefühl abhaken.
         </p>
       )}
+      <SourceVideo url={exercise.source.url} thumbnailUrl={exercise.source.thumbnailUrl} />
       <div className="flex flex-col gap-2">
         <PrimaryButton onClick={complete}>Fertig – das zählt</PrimaryButton>
         {ended && (

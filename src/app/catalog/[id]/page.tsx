@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { PosePlayer } from "@/components/PosePlayer";
+import { SourceVideo } from "@/components/SourceVideo";
 import { Card, KindBadge, PrimaryButton, SecondaryButton } from "@/components/ui";
 import { categoryPathLabel } from "@/lib/categories";
 import { useCategories, useComplaints, useExercise, usePlanItems } from "@/lib/hooks";
@@ -44,7 +45,11 @@ export default function ExerciseDetailPage() {
         <h2 className="mt-2 font-display text-3xl text-forest-dark">{exercise.title}</h2>
         <p className="mt-2 text-sm leading-relaxed text-ink/80">{exercise.summary}</p>
       </div>
-      <PosePlayer steps={exercise.steps} />
+      <section className="space-y-3">
+        <p className="text-xs uppercase tracking-[0.18em] text-forest-light">Zur Anleitung</p>
+        <PosePlayer steps={exercise.steps} />
+      </section>
+      <SourceVideo url={exercise.source.url} thumbnailUrl={exercise.source.thumbnailUrl} />
       <Card>
         <h3 className="font-display text-xl">Vorgeschlagener Rhythmus</h3>
         <p className="mt-2 text-sm leading-relaxed">{exercise.suggestedRhythm.note}</p>
@@ -81,7 +86,7 @@ export default function ExerciseDetailPage() {
         )}
         {exercise.source.type === "import" && exercise.source.label && (
           <p className="mt-3 text-xs text-forest-light">
-            Abgeleitet von „{exercise.source.label}“. Das Originalvideo wird nicht gezeigt – nur die einheitliche Figur.
+            Abgeleitet von „{exercise.source.label}“. Die Figur und die Schritte sind die Anleitung; das Originalvideo ist nur zusätzlich.
           </p>
         )}
       </Card>
