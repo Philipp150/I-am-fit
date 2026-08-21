@@ -46,6 +46,15 @@ describe("repository exports for Vercel/TypeScript", () => {
     expect(getProfile).toContain('from("profiles")');
   });
 
+  it("lets unsigned sessions keep a local Dexie plan instead of forcing an account", () => {
+    const ensure = exportedFunctionBody(source, "export async function ensureActivePlan(): Promise<TrainingPlan> {");
+    expect(ensure).not.toContain("Bitte zuerst anmelden, um einen Plan zu nutzen");
+    const saveItem = exportedFunctionBody(source, "export async function savePlanItem(item: PlanItem): Promise<void> {");
+    expect(saveItem).not.toContain("Bitte zuerst anmelden, um den Plan zu speichern");
+    const saveProfile = exportedFunctionBody(source, "export async function saveProfile(profile: Profile): Promise<void> {");
+    expect(saveProfile).not.toContain("Bitte zuerst anmelden.");
+  });
+
   it("does not await cloud catalog hydrate inside bootstrap", () => {
     const bootstrap = exportedFunctionBody(source, "export async function bootstrap(): Promise<void> {");
     expect(bootstrap).toContain("runBootstrap");

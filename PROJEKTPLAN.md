@@ -20,7 +20,7 @@ Quellcode: dieses Repository (`schlag-art/philipp150-I-am-fit`, Ursprung [github
 
 | Bereich | Inhalt |
 | --- | --- |
-| **Heute** | Fällige Plan-Übungen, Serie, Einstieg mit drei Ankern |
+| **Heute** | Fällige Plan-Übungen, Serie; Erstbesuch/leerer Plan: Beschwerden oder Kurzweg in unter einer Minute, dann heutige Übungen plus Erinnerungsangebot |
 | **Sammlung** | Hierarchische Kategorien, Tags, Katalog und eigene Übungen |
 | **Plan** | Mehrere Pläne (eigene und empfangene), Rhythmus, optionaler Zeitraum, aktiver Plan für Heute, Versand per E-Mail |
 | **Beschwerden** | Symptom-Auswahl mit Vorschlägen aus dem Katalog |
@@ -44,7 +44,7 @@ Vercel   │ Hosting, Import-API (/api/import)
 | Schicht | Technik |
 | --- | --- |
 | UI | `src/app/*`, `src/components/*` (PosePlayer + Gliederpuppe in `StickFigure.tsx`, Originalvideo in `SourceVideo.tsx`, Bewegungsspur in `PoseTrackCapture.tsx`), Bottom-Nav |
-| Domain | `src/lib/plan.ts`, `plan-share.ts`, `schedule.ts`, `catalog.ts`, `suggestions.ts`, `poses.ts`, `pose-track.ts` |
+| Domain | `src/lib/plan.ts`, `plan-share.ts`, `schedule.ts`, `catalog.ts`, `suggestions.ts`, `onboarding.ts`, `poses.ts`, `pose-track.ts` |
 | Persistenz | `src/lib/repository.ts` schaltet zwischen Dexie und Supabase |
 | Cloud | `supabase/setup.sql` (Schema inkl. `plans` / `plan_invites` / `exercises.pose_track`, RLS, Seed), `@supabase/ssr`; Tabellen existieren im Live-Projekt |
 | Import | `src/app/api/import/route.ts` + `extract-meta.ts` / `import-parse.ts`; Client-Analyse mit MediaPipe Pose (WASM) und Tesseract.js-OCR nur wenn Pixel da sind (Upload oder öffentliche Videodatei) |
@@ -156,3 +156,7 @@ Analyse-UX: „Bewegung wird erkannt …“ und „Text im Video wird gelesen �
 ## 14. Nachtrag: Text im Video (OCR + Untertitel)
 
 Beim Datei-Upload läuft OCR (Tesseract.js, WASM) im selben Durchgang wie die Bewegungsspur, etwas sparsamer als die Pose-Abtastung. Gelesen werden Einblendungen (Titel, „Schritt n“, Übungsnamen, Dauer, links/rechts). Vorhandene YouTube-Untertitel und Beschreibungen werden **dazugemerkt**, nicht verworfen. Klare Schrittgrenzen (Schritt-Marker, nummerierte Listen, neuer Overlay-Titel) teilen `steps[]` und setzen `startSec`, damit PosePlayer den neuen Schritt zur passenden Zeit zeigt. Unklarer Rauschen erzeugt keine Extra-Schritte. Ohne Datei bleiben Captions/Metadaten wie bisher; OCR braucht Pixel – derselbe Hinweis wie bei der Bewegungsspur. Es werden keine Frame-Bilder gespeichert. Der Service Worker cached YouTube weiterhin nicht.
+
+## 15. Nachtrag: 60-Sekunden-Onboarding (Beschwerden → Heute)
+
+Erstbesuch und leerer Plan: statt Katalogtour wählt die Person Beschwerden aus dem bestehenden Katalog oder einen Kurzweg („Nacken, 5 Minuten, Büro“). In unter einer Minute landet sie auf **Heute** mit wenigen, heute fälligen Übungen und einem optionalen Erinnerungsangebot. Kein Kontozwang, kein Schuldton. Dexie zuerst; Cloud nur wenn schon angemeldet. Bestehende und empfangene Pläne bleiben unangetastet. Offline, sobald der Katalog in Dexie liegt.

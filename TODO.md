@@ -144,3 +144,11 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] Klare Schrittgrenzen mit `startSec` stempeln; PosePlayer zeigt den Schritt zur Clip-Zeit; kein Erfinden aus OCR-Rauschen
 - [x] YouTube ohne Datei: Captions wie bisher, OCR braucht Pixel (gleicher Hinweis wie Bewegungsspur); Import schlägt ohne Text nicht fehl
 - [x] Tests für OCR→Schritte, Caption-Merge, Startzeiten, Fallback ohne Text; Lint und Production-Build
+
+## 60-Sekunden-Onboarding (Beschwerden → Heute)
+
+- [x] Erstbesuch und leerer Plan: Beschwerden oder Kurzweg („Nacken, 5 Minuten, Büro“) in unter einer Minute, Landung auf Heute mit machbaren Übungen
+- [x] Kein Katalogtour-Einstieg mehr; bestehender Beschwerden-Katalog; deutscher, druckfreier Text; kein Kontozwang
+- [x] Dexie zuerst, Cloud nur wenn schon angemeldet; bestehende und empfangene Pläne nicht überschreiben
+- [x] Erinnerungsangebot nach dem Seed (ohne Druck); Onboarding offline, wenn der Katalog schon in Dexie liegt
+- [x] Tests für First-Run vs. Returning User, Plan-Seed, Kurzweg; Lint und Production-Build

@@ -1,14 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ExerciseCard } from "@/components/ExerciseCard";
-import { Card, PrimaryButton } from "@/components/ui";
+import { OnboardingCta, OnboardingFlow, OnboardingReminder } from "@/components/Onboarding";
+import { Card } from "@/components/ui";
 import { greeting } from "@/lib/copy";
-import { useCompletions, useExercises, usePlanItems, useActivePlan, useProfile } from "@/lib/hooks";
-import { formatDuration, streakLength } from "@/lib/schedule";
-import { addExerciseToPlan, todayOverview } from "@/lib/plan";
+import { useCompletions, useComplaints, useExercises, usePlanItems, useActivePlan, useProfile } from "@/lib/hooks";
+import {
+  ONBOARDING_DISMISS_KEY,
+  ONBOARDING_REMINDER_KEY,
+  ONBOARDING_REMINDER_PENDING_KEY,
+  browserStorage,
+  clearStorageFlag,
+  onboardingDismissedFrom,
+  reminderAffordanceDoneFrom,
+  reminderAffordancePendingFrom,
+  shouldShowOnboarding,
+  writeStorageFlag,
+} from "@/lib/onboarding";
+import { todayOverview } from "@/lib/plan";
 import { creatorAttribution } from "@/lib/plan-share";
+import { ensureNotificationPermission } from "@/lib/reminders";
+import { saveProfile } from "@/lib/repository";
+import { formatDuration, streakLength } from "@/lib/schedule";
+import type { Exercise } from "@/lib/types";
 
 export default function HomePage() {
   const exercises = useExercises();
@@ -16,21 +32,74 @@ export default function HomePage() {
   const completions = useCompletions();
   const profile = useProfile();
   const activePlan = useActivePlan();
+  const complaints = useComplaints();
   const today = useMemo(() => new Date(), []);
   const overview = todayOverview(planItems, completions, today);
+  const storage = browserStorage();
+  const [dismissed, setDismissed] = useState(() => onboardingDismissedFrom(storage));
+  const [resumeFlow, setResumeFlow] = useState(false);
+  const [justSeeded, setJustSeeded] = useState(false);
+  const [reminderDone, setReminderDone] = useState(() => reminderAffordanceDoneFrom(storage));
+  const [reminderPending, setReminderPending] = useState(() => reminderAffordancePendingFrom(storage));
+  const [reminderNote, setReminderNote] = useState<string | null>(null);
+  const [reminderBusy, setReminderBusy] = useState(false);
 
   const byId = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise])), [exercises]);
   const streak = streakLength(
     completions.filter((item) => !item.skipped).map((item) => item.completedAt.slice(0, 10)),
     today,
   );
-  const starters = exercises.filter((exercise) =>
-    ["ex-neck-circles", "ex-mantra-here", "ex-box-breath"].includes(exercise.id),
-  );
+  const gate = justSeeded ? "hidden" : resumeFlow ? "flow" : shouldShowOnboarding(planItems, dismissed);
+  const showReminder = !reminderDone && (justSeeded || reminderPending);
+  const reminderTime = profile?.reminderTime || "08:30";
 
-  async function adoptStarters() {
-    for (const exercise of starters) {
-      await addExerciseToPlan(exercise);
+  function handleDismiss() {
+    writeStorageFlag(storage, ONBOARDING_DISMISS_KEY);
+    setDismissed(true);
+    setResumeFlow(false);
+  }
+
+  function handleSeeded(_picked: Exercise[]) {
+    writeStorageFlag(storage, ONBOARDING_REMINDER_PENDING_KEY);
+    clearStorageFlag(storage, ONBOARDING_DISMISS_KEY);
+    setReminderPending(true);
+    setJustSeeded(true);
+    setResumeFlow(false);
+    setDismissed(false);
+  }
+
+  function finishReminder() {
+    writeStorageFlag(storage, ONBOARDING_REMINDER_KEY);
+    clearStorageFlag(storage, ONBOARDING_REMINDER_PENDING_KEY);
+    setReminderDone(true);
+    setReminderPending(false);
+  }
+
+  async function enableReminder() {
+    setReminderBusy(true);
+    setReminderNote(null);
+    try {
+      const permission = await ensureNotificationPermission();
+      if (permission === "denied") {
+        setReminderNote("Benachrichtigungen sind blockiert. Die Uhrzeit merken wir uns trotzdem – unter Verlauf kannst du sie ändern.");
+      } else if (permission === "unsupported") {
+        setReminderNote("Dieser Browser kann keine lokalen Erinnerungen. Die Uhrzeit wird trotzdem gespeichert.");
+      } else {
+        setReminderNote("Erinnerung ist an. Sie kommt, wenn die App oder die installierte PWA erreichbar ist.");
+      }
+      await saveProfile({
+        id: profile?.id ?? "solo",
+        displayName: profile?.displayName ?? "",
+        reminderEnabled: true,
+        reminderTime,
+        activePlanId: profile?.activePlanId ?? activePlan?.id ?? null,
+        createdAt: profile?.createdAt ?? new Date().toISOString(),
+      });
+      finishReminder();
+    } catch (err) {
+      setReminderNote(err instanceof Error ? err.message : "Erinnerung konnte nicht gespeichert werden.");
+    } finally {
+      setReminderBusy(false);
     }
   }
 
@@ -55,25 +124,33 @@ export default function HomePage() {
         </div>
       </Card>
 
-      {overview.due.length === 0 && planItems.length === 0 ? (
-        <Card>
-          <h3 className="font-display text-2xl text-forest-dark">Noch kein Plan</h3>
-          <p className="mt-2 text-sm leading-relaxed text-ink/80">
-            Hol dir drei kurze Anker in den Alltag: Nacken, ein Mantra, ein Atem. Du kannst später alles ändern.
-          </p>
-          <div className="mt-4 space-y-2">
-            {starters.map((exercise) => (
-              <ExerciseCard key={exercise.id} exercise={exercise} />
-            ))}
-          </div>
-          <PrimaryButton className="mt-4 w-full" onClick={adoptStarters} disabled={starters.length === 0}>
-            Diese drei in den Plan
-          </PrimaryButton>
-          <Link href="/plan" className="mt-3 inline-block text-sm text-forest underline">
-            Alle Pläne
-          </Link>
-        </Card>
-      ) : overview.due.length === 0 ? (
+      {gate === "flow" && (
+        <OnboardingFlow
+          complaints={complaints}
+          exercises={exercises}
+          onSeeded={handleSeeded}
+          onDismiss={handleDismiss}
+        />
+      )}
+      {gate === "cta" && <OnboardingCta onStart={() => setResumeFlow(true)} />}
+      {gate === "hidden" && showReminder && (
+        <OnboardingReminder
+          time={reminderTime}
+          onEnable={() => void enableReminder()}
+          onSkip={finishReminder}
+          note={reminderNote}
+          busy={reminderBusy}
+        />
+      )}
+
+      {gate === "hidden" && overview.due.length === 0 && planItems.length === 0 ? (
+        justSeeded ? (
+          <Card>
+            <h3 className="font-display text-2xl text-forest-dark">Dein Plan für heute</h3>
+            <p className="mt-2 text-sm leading-relaxed text-ink/80">Die Übungen erscheinen in einem Moment. Du kannst gleich starten.</p>
+          </Card>
+        ) : null
+      ) : gate === "hidden" && overview.due.length === 0 ? (
         <Card>
           <h3 className="font-display text-2xl text-forest-dark">Heute Pause im aktiven Plan</h3>
           <p className="mt-2 text-sm leading-relaxed text-ink/80">
@@ -83,7 +160,7 @@ export default function HomePage() {
             Pläne ansehen
           </Link>
         </Card>
-      ) : overview.allDone ? (
+      ) : gate === "hidden" && overview.allDone ? (
         <Card className="bg-forest text-cream">
           <h3 className="font-display text-2xl">Für heute genug</h3>
           <p className="mt-2 text-sm text-cream/90">Du hast gemacht, was du dir vorgenommen hattest. Mehr muss nicht.</p>
@@ -91,7 +168,7 @@ export default function HomePage() {
             Verlauf ansehen
           </Link>
         </Card>
-      ) : (
+      ) : gate === "hidden" ? (
         <div className="space-y-3">
           <h3 className="font-display text-2xl text-forest-dark">Heute offen</h3>
           {overview.remaining.map((item) => {
@@ -118,18 +195,20 @@ export default function HomePage() {
             );
           })}
         </div>
-      )}
+      ) : null}
 
-      <div className="grid grid-cols-2 gap-3">
-        <Link href="/catalog/import" className="rounded-[1.4rem] bg-clay px-4 py-5 text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-forest">
-          <p className="text-xs uppercase tracking-widest">Link</p>
-          <p className="font-display text-xl">YouTube / Instagram</p>
-        </Link>
-        <Link href="/complaints" className="rounded-[1.4rem] bg-forest-dark px-4 py-5 text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-forest">
-          <p className="text-xs uppercase tracking-widest">Unwohl</p>
-          <p className="font-display text-xl">Übungen vorschlagen</p>
-        </Link>
-      </div>
+      {gate !== "flow" && (
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/catalog/import" className="rounded-[1.4rem] bg-clay px-4 py-5 text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-forest">
+            <p className="text-xs uppercase tracking-widest">Link</p>
+            <p className="font-display text-xl">YouTube / Instagram</p>
+          </Link>
+          <Link href="/complaints" className="rounded-[1.4rem] bg-forest-dark px-4 py-5 text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-forest">
+            <p className="text-xs uppercase tracking-widest">Thema</p>
+            <p className="font-display text-xl">Worum soll’s gehen?</p>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

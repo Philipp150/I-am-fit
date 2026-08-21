@@ -194,14 +194,16 @@ export async function deleteExercise(id: string): Promise<void> {
   notifyData();
 }
 
+async function listLocalPlans(): Promise<TrainingPlan[]> {
+  await ensureSeeded();
+  const plans = await getDb().plans.toArray();
+  return plans.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
 export async function listPlans(): Promise<TrainingPlan[]> {
-  if (!isCloudEnabled()) {
-    await ensureSeeded();
-    const plans = await getDb().plans.toArray();
-    return plans.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }
+  if (!isCloudEnabled()) return listLocalPlans();
   const user = await currentUser();
-  if (!user) return [];
+  if (!user) return listLocalPlans();
   const { data, error } = await createBrowserSupabase().from("plans").select("*").order("created_at", { ascending: false });
   throwIfError(error);
   const items = ((data ?? []) as TrainingPlanRow[]).map(trainingPlanFromRow);
@@ -212,7 +214,7 @@ export async function listPlans(): Promise<TrainingPlan[]> {
 export async function getPlan(id: string): Promise<TrainingPlan | undefined> {
   if (!isCloudEnabled()) return getDb().plans.get(id);
   const user = await currentUser();
-  if (!user) return undefined;
+  if (!user) return getDb().plans.get(id);
   const { data, error } = await createBrowserSupabase().from("plans").select("*").eq("id", id).maybeSingle();
   throwIfError(error);
   const plan = data ? trainingPlanFromRow(data as TrainingPlanRow) : undefined;
@@ -227,7 +229,11 @@ export async function savePlan(plan: TrainingPlan): Promise<void> {
     return;
   }
   const user = await currentUser();
-  if (!user) throw new Error("Bitte zuerst anmelden, um Pläne zu speichern.");
+  if (!user) {
+    await getDb().plans.put(plan);
+    notifyData();
+    return;
+  }
   const { error } = await createBrowserSupabase().from("plans").upsert(trainingPlanToRow(plan, user.id));
   throwIfError(error);
   remember(() => getDb().plans.put(plan));
@@ -245,8 +251,7 @@ async function creatorFields(user: SessionUser): Promise<{ createdById: string; 
 
 export async function createPlan(title: string, activate = false): Promise<TrainingPlan> {
   const user = await currentUser();
-  if (isCloudEnabled() && !user) throw new Error("Bitte zuerst anmelden, um einen Plan anzulegen.");
-  const creator = user ? await creatorFields(user) : { createdById: "solo", createdByName: "", createdByEmail: "" };
+  const creator = user && user.id !== "solo" ? await creatorFields(user) : { createdById: "solo", createdByName: "", createdByEmail: "" };
   const plan: TrainingPlan = {
     id: newId("plan"),
     title: title.trim() || "Neuer Plan",
@@ -323,9 +328,6 @@ export async function setActivePlan(planId: string | null): Promise<void> {
 
 export async function ensureActivePlan(): Promise<TrainingPlan> {
   const user = await currentUser();
-  if (isCloudEnabled() && !user) {
-    throw new Error("Bitte zuerst anmelden, um einen Plan zu nutzen.");
-  }
   const plans = await listPlans();
   const profile = await getProfile();
   const active = plans.find((plan) => plan.id === profile?.activePlanId && !plan.archived);
@@ -349,7 +351,7 @@ export async function ensureActivePlan(): Promise<TrainingPlan> {
 export async function listAllPlanItems(): Promise<PlanItem[]> {
   if (!isCloudEnabled()) return getDb().planItems.toArray();
   const user = await currentUser();
-  if (!user) return [];
+  if (!user) return getDb().planItems.toArray();
   const { data, error } = await createBrowserSupabase().from("plan_items").select("*").order("created_at");
   throwIfError(error);
   const items = ((data ?? []) as PlanRow[]).map(planFromRow);
@@ -360,7 +362,7 @@ export async function listAllPlanItems(): Promise<PlanItem[]> {
 export async function listPlanItemsForPlan(planId: string): Promise<PlanItem[]> {
   if (!isCloudEnabled()) return getDb().planItems.where("planId").equals(planId).toArray();
   const user = await currentUser();
-  if (!user) return [];
+  if (!user) return getDb().planItems.where("planId").equals(planId).toArray();
   const { data, error } = await createBrowserSupabase()
     .from("plan_items")
     .select("*")
@@ -393,7 +395,11 @@ export async function savePlanItem(item: PlanItem): Promise<void> {
     return;
   }
   const user = await currentUser();
-  if (!user) throw new Error("Bitte zuerst anmelden, um den Plan zu speichern.");
+  if (!user) {
+    await getDb().planItems.put(item);
+    notifyData();
+    return;
+  }
   const { error } = await createBrowserSupabase().from("plan_items").upsert(planToRow(item, user.id));
   throwIfError(error);
   remember(() => getDb().planItems.put(item));
@@ -451,7 +457,10 @@ export async function addCompletion(item: Completion): Promise<void> {
 export async function getProfile(): Promise<Profile | undefined> {
   if (!isCloudEnabled()) return getDb().profile.get("solo");
   const user = await currentUser();
-  if (!user) return undefined;
+  if (!user) {
+    await ensureSeeded();
+    return getDb().profile.get("solo");
+  }
   const { data, error } = await createBrowserSupabase().from("profiles").select("*").eq("id", user.id).maybeSingle();
   throwIfError(error);
   const profile = data ? profileFromRow(data as ProfileRow) : undefined;
@@ -466,7 +475,11 @@ export async function saveProfile(profile: Profile): Promise<void> {
     return;
   }
   const user = await currentUser();
-  if (!user) throw new Error("Bitte zuerst anmelden.");
+  if (!user) {
+    await getDb().profile.put({ ...profile, id: profile.id || "solo" });
+    notifyData();
+    return;
+  }
   const { error } = await createBrowserSupabase().from("profiles").upsert({
     id: user.id,
     display_name: profile.displayName,
