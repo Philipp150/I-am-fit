@@ -64,7 +64,7 @@ Pläne können von einer anderen Person (z. B. Physiotherapie) zusammengestellt 
 
 Ohne Vercel nur lokal mit Node. Ohne Supabase nur dieser eine Browser.
 
-Setup-Kurzfassung: `supabase/setup.sql` im SQL-Editor ausführen; Site-URL und Redirect `/auth/callback` setzen; in Vercel `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`. Keine Secrets ins Repo oder in Cursor-Regeln. Das Live-Projekt hat `plans` und `plan_invites`; nach Schema-Änderungen (inkl. `pose_track`) die Datei erneut ausführen.
+Setup-Kurzfassung: `supabase/setup.sql` im SQL-Editor ausführen; Site-URL und Redirect `/auth/callback` setzen; in Vercel `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`. Keine Secrets ins Repo oder in Cursor-Regeln. Das Live-Projekt hat `plans`, `plan_invites` und `exercises.pose_track`; nach weiteren Schema-Änderungen die Datei erneut ausführen.
 
 Entwicklung:
 
