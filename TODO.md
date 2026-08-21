@@ -84,6 +84,7 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 ## Betrieb (Vercel)
 
 - [x] Production-Build: TypeScript-Fehler in `extractYoutubeCaptionTracks` (`map` + `null` nicht als `CaptionTrack[]`) beheben, damit Vercel `i-am-super-fit` wieder deployt
+- [x] Preview-Build SHA `5cb5bd2` (`dpl_AZfzZPe7iLsTec2LffMoXfwbuXAs`): `getProfile` war in `addCompletion` gerutscht (kein Export, doppelte `user`/`error`, Return `Profile` vs `void`). Eigene Funktion bleibt; Regressionstest. CaptionTrack-`null` nicht wieder eingeführt.
 
 ## Originalvideo und Import-Qualität
 
