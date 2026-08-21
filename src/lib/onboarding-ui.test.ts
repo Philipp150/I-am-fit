@@ -6,49 +6,37 @@ function read(rel: string): string {
   return readFileSync(resolve(__dirname, rel), "utf8");
 }
 
-const UI_FILES = [
-  "../app/page.tsx",
-  "../app/complaints/page.tsx",
-  "../app/catalog/page.tsx",
-  "../app/catalog/[id]/page.tsx",
-  "../components/AppShell.tsx",
-  "../components/ExerciseEditor.tsx",
-  "../components/Onboarding.tsx",
-  "../components/ThemeChips.tsx",
-];
-
-describe("theme language in the UI", () => {
-  it("does not show Beschwerde to people who may want abs, not a diagnosis", () => {
-    for (const rel of UI_FILES) {
-      const source = read(rel);
-      expect(source, rel).not.toMatch(/Beschwerde/i);
-    }
-  });
-
-  it("turns first-run Heute into Thema → Heute instead of a catalog tour", () => {
+describe("60-second onboarding UI", () => {
+  it("turns first-run Heute into complaints → today instead of a catalog tour", () => {
     const home = read("../app/page.tsx");
     expect(home).toContain("OnboardingFlow");
     expect(home).toContain("shouldShowOnboarding");
-    expect(home).toContain("Worum soll’s gehen?");
+    expect(home).toContain("OnboardingReminder");
+    expect(home).toContain("Erinnerung um");
     expect(home).not.toContain("Diese drei in den Plan");
     expect(home).not.toContain("ex-mantra-here");
     expect(home).not.toContain("adoptStarters");
-    expect(home).not.toContain("Unwohl");
+    expect(home).not.toContain("Bitte anmelden");
+    expect(home).not.toContain("Konto erstellen");
+    expect(home).not.toContain("Schuld");
   });
 
-  it("keeps the flow German with 60-second chips including Bauch", () => {
+  it("keeps the flow German, offline-capable, and free of account pressure", () => {
     const onboarding = read("../components/Onboarding.tsx");
-    expect(onboarding).toContain("Worum soll’s gehen?");
-    expect(onboarding).toContain("ONBOARDING_THEMES");
-    expect(onboarding).toContain("FIRST_RUN_DURATION_SEC");
-    expect(onboarding).toContain("Auch Bauch zählt");
-    expect(onboarding).toContain("Das reicht für heute");
+    expect(onboarding).toContain("Was merkst du gerade?");
+    expect(onboarding).toContain("Nacken, 5 Minuten, Büro");
     expect(onboarding).toContain("Kein Konto");
+    expect(onboarding).toContain("Das reicht für heute");
+    expect(onboarding).toContain("Erst mal umsehen");
     expect(onboarding).toContain("auch offline");
+    expect(onboarding).toContain("Erinnerung, wenn du magst");
     expect(onboarding).not.toContain("Du musst");
+    expect(onboarding).not.toContain("Konto erstellen");
+    expect(onboarding).not.toContain("ThemeChips");
+    expect(onboarding).not.toContain("ONBOARDING_THEMES");
   });
 
-  it("lets an empty plan take a theme to Heute without wiping a returning plan", () => {
+  it("lets empty-plan complaints land on Heute without wiping a returning plan", () => {
     const complaints = read("../app/complaints/page.tsx");
     expect(complaints).toContain("seedOnboardingPlan");
     expect(complaints).toContain("Für heute übernehmen");

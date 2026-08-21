@@ -2,61 +2,52 @@ import { addExerciseToPlan } from "./plan";
 import { createPlan, ensureActivePlan, listPlanItemsForPlan } from "./repository";
 import { isoDate } from "./schedule";
 import { suggestExercisesForComplaints } from "./suggestions";
-import type { Complaint, Exercise, PlanItem, TrainingPlan } from "./types";
+import type { Exercise, PlanItem, TrainingPlan } from "./types";
 
 export const ONBOARDING_DISMISS_KEY = "iamfit-onboarding-dismissed";
 export const ONBOARDING_REMINDER_KEY = "iamfit-onboarding-reminder-done";
 export const ONBOARDING_REMINDER_PENDING_KEY = "iamfit-onboarding-reminder-pending";
-export const FIRST_RUN_DURATION_SEC = 60;
 
 export type OnboardingGate = "flow" | "cta" | "hidden";
 
-export type OnboardingThemeKind = "körperregion" | "ziel" | "thema";
-
-export type OnboardingTheme = {
+export type QuickPath = {
   id: string;
   label: string;
-  kind: OnboardingThemeKind;
-  starterId: string;
   detail: string;
+  complaintIds: string[];
+  preferCategoryIds: string[];
+  maxTotalSec: number;
+  maxCount: number;
 };
 
-/** First-run chips: Körperregion, Ziel, Thema – never a diagnosis. */
-export const ONBOARDING_THEMES: OnboardingTheme[] = [
+/** Named shortcuts that still resolve against the live complaint catalog. */
+export const QUICK_PATHS: QuickPath[] = [
   {
-    id: "comp-neck",
-    label: "Nacken",
-    kind: "körperregion",
-    starterId: "ex-neck-circles",
-    detail: "Kleine Bewegungen für Hals und Schultergürtel.",
+    id: "office-neck-5",
+    label: "Nacken, 5 Minuten, Büro",
+    detail: "Sitzen oder kurz stehen – ohne auf den Boden zu müssen.",
+    complaintIds: ["comp-neck"],
+    preferCategoryIds: ["cat-pause", "cat-neck", "cat-shoulders"],
+    maxTotalSec: 5 * 60,
+    maxCount: 3,
   },
   {
-    id: "comp-back",
-    label: "Rücken",
-    kind: "körperregion",
-    starterId: "ex-cat-cow",
-    detail: "Sanft beugen und strecken.",
+    id: "stress-short",
+    label: "Unruhe, kurz",
+    detail: "Atem und ein Satz. Drei Minuten, kein Programm.",
+    complaintIds: ["comp-stress"],
+    preferCategoryIds: ["cat-breath", "cat-mantras", "cat-pause"],
+    maxTotalSec: 3 * 60,
+    maxCount: 2,
   },
   {
-    id: "comp-belly",
-    label: "Bauch",
-    kind: "ziel",
-    starterId: "ex-belly-wake",
-    detail: "Mitte anschalten – Kraft, keine Diagnose.",
-  },
-  {
-    id: "comp-mobility",
-    label: "Beweglichkeit",
-    kind: "ziel",
-    starterId: "ex-morning-reach",
-    detail: "Länge und Fließen, eine Minute.",
-  },
-  {
-    id: "comp-office",
-    label: "Büro",
-    kind: "thema",
-    starterId: "ex-desk-break",
-    detail: "Zwischendurch am Schreibtisch.",
+    id: "sleep",
+    label: "Schwer einschlafen",
+    detail: "Weich ausklingen, ohne spät noch zu trainieren.",
+    complaintIds: ["comp-sleep"],
+    preferCategoryIds: ["cat-evening", "cat-breath"],
+    maxTotalSec: 4 * 60,
+    maxCount: 2,
   },
 ];
 
@@ -69,25 +60,31 @@ export function shouldShowOnboarding(planItems: PlanItem[], dismissed: boolean):
   return dismissed ? "cta" : "flow";
 }
 
-function storageFlagFrom(storage: Pick<Storage, "getItem"> | null | undefined, key: string): boolean {
+export function onboardingDismissedFrom(storage: Pick<Storage, "getItem"> | null | undefined): boolean {
   if (!storage) return false;
   try {
-    return storage.getItem(key) === "1";
+    return storage.getItem(ONBOARDING_DISMISS_KEY) === "1";
   } catch {
     return false;
   }
 }
 
-export function onboardingDismissedFrom(storage: Pick<Storage, "getItem"> | null | undefined): boolean {
-  return storageFlagFrom(storage, ONBOARDING_DISMISS_KEY);
-}
-
 export function reminderAffordanceDoneFrom(storage: Pick<Storage, "getItem"> | null | undefined): boolean {
-  return storageFlagFrom(storage, ONBOARDING_REMINDER_KEY);
+  if (!storage) return false;
+  try {
+    return storage.getItem(ONBOARDING_REMINDER_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
 export function reminderAffordancePendingFrom(storage: Pick<Storage, "getItem"> | null | undefined): boolean {
-  return storageFlagFrom(storage, ONBOARDING_REMINDER_PENDING_KEY);
+  if (!storage) return false;
+  try {
+    return storage.getItem(ONBOARDING_REMINDER_PENDING_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
 export function writeStorageFlag(storage: Pick<Storage, "setItem"> | null | undefined, key: string): void {
@@ -117,29 +114,46 @@ export function browserStorage(): Storage | null {
   }
 }
 
-export function pickFirstRunExercise(themeId: string, exercises: Exercise[]): Exercise | undefined {
-  const theme = ONBOARDING_THEMES.find((item) => item.id === themeId);
-  if (theme) {
-    const starter = exercises.find((exercise) => exercise.id === theme.starterId);
-    if (starter) return starter;
+export type PickOnboardingInput = {
+  complaintIds: string[];
+  exercises: Exercise[];
+  maxTotalSec?: number;
+  maxCount?: number;
+  preferCategoryIds?: string[];
+};
+
+export function pickOnboardingExercises(input: PickOnboardingInput): Exercise[] {
+  const maxTotalSec = input.maxTotalSec ?? 8 * 60;
+  const maxCount = input.maxCount ?? 4;
+  const preferred = new Set(input.preferCategoryIds ?? []);
+  const ranked = suggestExercisesForComplaints(input.complaintIds, input.exercises);
+  const scored = ranked
+    .map((exercise, index) => {
+      const categoryBonus = exercise.categoryIds.some((id) => preferred.has(id)) ? 40 : 0;
+      const shortBonus = Math.max(0, 200 - exercise.defaultDurationSec) / 8;
+      return { exercise, score: (ranked.length - index) * 8 + categoryBonus + shortBonus };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const picked: Exercise[] = [];
+  let used = 0;
+  for (const { exercise } of scored) {
+    if (picked.length >= maxCount) break;
+    const duration = Math.max(1, exercise.defaultDurationSec);
+    if (picked.length === 0) {
+      picked.push(exercise);
+      used += Math.min(duration, maxTotalSec);
+      continue;
+    }
+    if (used + duration > maxTotalSec) continue;
+    picked.push(exercise);
+    used += duration;
   }
-  return suggestExercisesForComplaints([themeId], exercises)[0];
+  return picked;
 }
 
-export function firstRunPlanOverrides(now = new Date()) {
-  return {
-    durationSec: FIRST_RUN_DURATION_SEC,
-    keepUntil: null as null,
-    rhythm: { kind: "daily" as const, startDate: isoDate(now) },
-  };
-}
-
-export function orderedThemes(complaints: Complaint[]): Complaint[] {
-  const featured = ONBOARDING_THEMES.map((theme) => theme.id);
-  const byId = new Map(complaints.map((item) => [item.id, item]));
-  const first = featured.map((id) => byId.get(id)).filter((item): item is Complaint => Boolean(item));
-  const rest = complaints.filter((item) => !featured.includes(item.id));
-  return [...first, ...rest];
+export function onboardingTotalSec(exercises: Exercise[]): number {
+  return exercises.reduce((sum, exercise) => sum + exercise.defaultDurationSec, 0);
 }
 
 export type SeedOnboardingResult =
@@ -181,12 +195,15 @@ export async function seedOnboardingPlan(
     planId = writable.id;
   }
 
-  const overrides = firstRunPlanOverrides(deps.today ?? new Date());
+  const today = deps.today ?? new Date();
+  const startDate = isoDate(today);
   const itemIds: string[] = [];
   for (const exercise of exercises) {
     const id = await deps.addToPlan(exercise, {
       planId,
-      ...overrides,
+      rhythm: { kind: "daily", startDate },
+      durationSec: exercise.defaultDurationSec,
+      keepUntil: null,
     });
     itemIds.push(id);
   }
