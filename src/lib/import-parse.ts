@@ -45,6 +45,12 @@ const COMPLAINT_KEYWORDS: Array<{ id: string; pattern: RegExp }> = [
 ];
 
 const POSE_KEYWORDS: Array<{ pose: PoseId; pattern: RegExp }> = [
+  { pose: "jawSoft", pattern: /kiefer|jaw|zähne|zunge|kafer/i },
+  { pose: "gazeFar", pattern: /ferne|auge|blick|20-20-20|blinzeln/i },
+  { pose: "wristsFlex", pattern: /handgelenk|wrist|hand kreis/i },
+  { pose: "walkLeft", pattern: /gehen|laufen|walk|schritt/i },
+  { pose: "shrug", pattern: /schultern hoch|shrug|schultern abladen|schultern fallen/i },
+  { pose: "pelvicTuck", pattern: /beckenkipp|pelvic tilt|becken kippen/i },
   { pose: "fold", pattern: /vorbeuge|forward fold|fold/i },
   { pose: "squat", pattern: /kniebeuge|squat/i },
   { pose: "lunge", pattern: /ausfall|lunge/i },
@@ -56,7 +62,8 @@ const POSE_KEYWORDS: Array<{ pose: PoseId; pattern: RegExp }> = [
   { pose: "twist", pattern: /dreh|twist/i },
   { pose: "sit", pattern: /sitz|sit/i },
   { pose: "breathe", pattern: /atmung|breath/i },
-  { pose: "neckTilt", pattern: /nacken/i },
+  { pose: "neckLeft", pattern: /nacken/i },
+  { pose: "neckTilt", pattern: /hals/i },
   { pose: "lie", pattern: /liegen|savasana|leichen/i },
   { pose: "warrior", pattern: /krieger|warrior/i },
   { pose: "tree", pattern: /baum|tree pose/i },
@@ -172,8 +179,8 @@ export function guessPoses(text: string): PoseId[] {
   if (unique.length === 0) {
     const kind = guessKind(text);
     if (kind === "mantra") return ["heart", "stand", "heart"];
-    if (kind === "breath") return ["sit", "breathe", "sit"];
-    if (kind === "mind") return ["sit", "breathe", "lie"];
+    if (kind === "breath") return ["sit", "breatheIn", "breatheOut", "sit"];
+    if (kind === "mind") return ["sit", "gazeFar", "sit"];
     return ["stand", "reachUp", "fold", "stand"];
   }
   if (unique.length === 1) return [unique[0], "stand", unique[0]];

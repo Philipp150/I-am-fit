@@ -20,7 +20,26 @@ export type PoseId =
   | "tree"
   | "hipOpen"
   | "chestOpen"
-  | "heart";
+  | "heart"
+  | "neckLeft"
+  | "neckRight"
+  | "shrug"
+  | "shouldersDown"
+  | "jawSoft"
+  | "gazeFar"
+  | "kneesUp"
+  | "pelvicTuck"
+  | "pelvicArch"
+  | "walkLeft"
+  | "walkRight"
+  | "wristsFlex"
+  | "wristsExtend"
+  | "shakeOut"
+  | "twistOther"
+  | "treeOther"
+  | "lungeOther"
+  | "breatheIn"
+  | "breatheOut";
 
 export type RhythmKind = "daily" | "weekdays" | "weekends" | "days" | "every_n_days";
 

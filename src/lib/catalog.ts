@@ -77,8 +77,9 @@ export const CATALOG_EXERCISES: Exercise[] = [
     },
     steps: steps([
       ["stand", "Stell dich oder setz dich aufrecht hin. Schultern schwer, Kiefer locker."],
-      ["neckTilt", "Neige das Ohr zur Schulter. Nicht ziehen, nur nachgeben.", 10],
-      ["neckTilt", "Kleine Kreise, halb so groß wie du denkst. Atme dabei ruhig.", 20],
+      ["neckLeft", "Neige das linke Ohr zur Schulter. Nicht ziehen, nur nachgeben.", 8],
+      ["neckRight", "Andere Seite. Kleiner als du denkst.", 8],
+      ["neckLeft", "Jetzt ganz langsam kreisen: vor, zur Seite, hinten, zur anderen Seite.", 12],
       ["stand", "Komm zur Mitte zurück. Spüre, ob der Kopf leichter sitzt."],
     ]),
   }),
@@ -97,8 +98,9 @@ export const CATALOG_EXERCISES: Exercise[] = [
     },
     steps: steps([
       ["stand", "Arme hängen lassen. Spüre das Gewicht der Hände."],
-      ["chestOpen", "Schultern nach vorn, hoch, hinten, unten – große, langsame Kreise.", 16],
-      ["reachUp", "Einmal einatmen, Arme heben, ausatmen, Schultern fallen lassen."],
+      ["shrug", "Schultern nach vorn und hoch, Richtung Ohren.", 8],
+      ["chestOpen", "Weiter hinten, Schulterblätter zur Gesäßtasche.", 8],
+      ["shouldersDown", "Unten ankommen lassen. Dann die Kreise langsam weiter.", 10],
       ["stand", "Prüfe: Sind die Schultern näher an den Hüften als am Kiefer?"],
     ]),
   }),
@@ -201,7 +203,9 @@ export const CATALOG_EXERCISES: Exercise[] = [
     steps: steps([
       ["stand", "Füße etwas breiter als die Hüfte, Fußspitzen leicht außen."],
       ["squat", "Senke dich ab, als würdest du dich auf einen Stuhl setzen. Knie zeigen über die Füße.", 12],
-      ["stand", "Drück dich über die ganze Fußsohle wieder hoch. 8 ruhige Wiederholungen."],
+      ["stand", "Drück dich über die ganze Fußsohle wieder hoch.", 8],
+      ["squat", "Noch einmal runter – Qualität vor Tiefe.", 12],
+      ["stand", "Aufrichten. Acht ruhige Wiederholungen reichen."],
     ]),
   }),
   exercise({
@@ -219,8 +223,10 @@ export const CATALOG_EXERCISES: Exercise[] = [
     },
     steps: steps([
       ["stand", "Großer Schritt nach hinten mit dem rechten Fuß."],
-      ["lunge", "Hintere Ferse hebt, vordere Hüfte sinkt. Schambein leicht nach vorn-oben.", 20],
-      ["stand", "Seite wechseln und gleich lang bleiben."],
+      ["lunge", "Hintere Ferse hebt, vordere Hüfte sinkt. Schambein leicht nach vorn-oben.", 16],
+      ["stand", "Zurück zur Mitte."],
+      ["lungeOther", "Andere Seite, gleich lang bleiben.", 16],
+      ["stand", "Aufrichten und nachspüren."],
     ]),
   }),
   exercise({
@@ -277,8 +283,10 @@ export const CATALOG_EXERCISES: Exercise[] = [
     },
     steps: steps([
       ["stand", "Finde einen Punkt zum Anschauen. Gewicht auf den linken Fuß."],
-      ["tree", "Rechte Fußsohle an Waden oder Oberschenkel, nie gegen das Knie. Hände vor der Brust oder nach oben.", 20],
-      ["stand", "Seite wechseln. Wenn du fällst, bist du mittendrin, nicht draußen."],
+      ["tree", "Rechte Fußsohle an Waden oder Oberschenkel, nie gegen das Knie.", 16],
+      ["stand", "Beide Füße, kurz sammeln."],
+      ["treeOther", "Andere Seite. Wenn du fällst, bist du mittendrin, nicht draußen.", 16],
+      ["stand", "Wieder auf beiden Füßen."],
     ]),
   }),
   exercise({
@@ -336,8 +344,10 @@ export const CATALOG_EXERCISES: Exercise[] = [
     },
     steps: steps([
       ["sit", "Sitzbeinhöcker geerdet, Wirbelsäule lang."],
-      ["twist", "Drehe dich aus der Taille, nicht aus dem Kiefer. Blick folgt zuletzt.", 16],
-      ["sit", "Mitte, andere Seite, gleiche Dauer."],
+      ["twist", "Drehe dich nach einer Seite aus der Taille, nicht aus dem Kiefer.", 12],
+      ["sit", "Mitte."],
+      ["twistOther", "Andere Seite, gleiche Dauer. Blick folgt zuletzt.", 12],
+      ["sit", "Wieder zur Mitte."],
     ]),
   }),
   exercise({
@@ -355,8 +365,10 @@ export const CATALOG_EXERCISES: Exercise[] = [
     },
     steps: steps([
       ["sit", "Sitz oder Stand. Schultern schwer."],
-      ["breathe", "4 Sekunden ein, 4 halten, 4 aus, 4 halten. Vier bis sechs Runden.", 32],
-      ["sit", "Wieder normal atmen. Nichts muss sich großartig anfühlen."],
+      ["breatheIn", "Vier Sekunden ein.", 4],
+      ["breathe", "Vier Sekunden halten.", 4],
+      ["breatheOut", "Vier Sekunden aus.", 4],
+      ["sit", "Vier Sekunden Pause, dann die Runde wiederholen.", 4],
     ]),
   }),
   exercise({
@@ -374,7 +386,9 @@ export const CATALOG_EXERCISES: Exercise[] = [
     },
     steps: steps([
       ["lie", "Liegen oder sitzen. Zungenspitze darf hinter den Schneidezähnen ruhen."],
-      ["breathe", "Einatmen 4, halten 7, ausatmen 8. Vier Runden reichen.", 40],
+      ["breatheIn", "Einatmen, vier.", 4],
+      ["breathe", "Halten, sieben.", 7],
+      ["breatheOut", "Ausatmen, acht. Vier Runden reichen.", 8],
       ["lie", "Danach nichts weiter tun. Einfach liegen bleiben."],
     ]),
   }),
@@ -393,7 +407,8 @@ export const CATALOG_EXERCISES: Exercise[] = [
     },
     steps: steps([
       ["sit", "Bequem sitzen. Eine Hand am Bauch, wenn es hilft."],
-      ["breathe", "5 Sekunden ein, 5 Sekunden aus. Weich, durch die Nase, wenn möglich.", 40],
+      ["breatheIn", "Fünf Sekunden ein, weich, durch die Nase wenn möglich.", 5],
+      ["breatheOut", "Fünf Sekunden aus.", 5],
       ["sit", "Öffne die Augen, wenn sie zu waren, und nimm den Raum wieder wahr."],
     ]),
   }),
@@ -529,9 +544,12 @@ export const CATALOG_EXERCISES: Exercise[] = [
     },
     steps: steps([
       ["stand", "Steh auf. Ja, wirklich aufstehen."],
-      ["neckTilt", "Nacken neigen, beide Seiten.", 12],
-      ["chestOpen", "Schultern kreisen und die Brust öffnen.", 10],
-      ["breathe", "Vier ruhige Atemzüge.", 16],
+      ["neckLeft", "Nacken zur einen Seite neigen.", 8],
+      ["neckRight", "Zur anderen Seite.", 8],
+      ["shrug", "Schultern einmal hoch.", 6],
+      ["chestOpen", "Brust öffnen, Schultern hinten-unten.", 8],
+      ["breatheIn", "Ein ruhiger Atemzug.", 4],
+      ["breatheOut", "Und aus.", 4],
     ]),
   }),
   exercise({
@@ -549,8 +567,8 @@ export const CATALOG_EXERCISES: Exercise[] = [
     },
     steps: steps([
       ["sit", "Lippen geschlossen, Zähne nicht. Zunge hinter den Schneidezähnen ablegen."],
-      ["neckTilt", "Kiefer ganz leicht nach links und rechts gleiten lassen. Kein Dehnen, nur Loslassen.", 16],
-      ["sit", "Ein Atemzug in die Schläfen. Schultern dürfen mitfallen."],
+      ["jawSoft", "Kiefer ganz leicht nach links und rechts gleiten lassen. Kein Dehnen, nur Loslassen.", 16],
+      ["shouldersDown", "Ein Atemzug in die Schläfen. Schultern dürfen mitfallen."],
     ]),
   }),
   exercise({
@@ -568,8 +586,9 @@ export const CATALOG_EXERCISES: Exercise[] = [
     },
     steps: steps([
       ["stand", "Arme vor dem Körper, Finger locker."],
-      ["chestOpen", "Handgelenke langsam kreisen, dann die andere Richtung. Atme dabei normal.", 20],
-      ["stand", "Hände ausschütteln, als wären sie nass."],
+      ["wristsFlex", "Handgelenke nach vorn kippen.", 6],
+      ["wristsExtend", "Und nach hinten. Langsam kreisen, dann die andere Richtung.", 8],
+      ["shakeOut", "Hände ausschütteln, als wären sie nass."],
     ]),
   }),
   exercise({
@@ -587,7 +606,7 @@ export const CATALOG_EXERCISES: Exercise[] = [
     },
     steps: steps([
       ["sit", "Vom Schirm wegdrehen. Schultern schwer."],
-      ["breathe", "Einen Punkt in der Ferne wählen und 20 ruhige Sekunden dort bleiben.", 20],
+      ["gazeFar", "Einen Punkt in der Ferne wählen und 20 ruhige Sekunden dort bleiben.", 20],
       ["sit", "Blinzeln. Danach darf der Bildschirm wieder da sein."],
     ]),
   }),
@@ -605,9 +624,10 @@ export const CATALOG_EXERCISES: Exercise[] = [
       note: "Vier Wochen abends, danach an Tagen mit viel Sitzen behalten.",
     },
     steps: steps([
-      ["lie", "Rückenlage, Knie aufgestellt, Füße am Boden."],
-      ["cat", "Becken kippen: Lendenwirbel kurz zum Boden, dann die natürliche Kurve wieder erlauben.", 24],
-      ["lie", "Still liegen und den Kontakt zum Boden spüren."],
+      ["kneesUp", "Rückenlage, Knie aufgestellt, Füße am Boden."],
+      ["pelvicTuck", "Becken kippen: Lendenwirbel kurz zum Boden.", 10],
+      ["pelvicArch", "Dann die natürliche Kurve wieder erlauben.", 10],
+      ["kneesUp", "Still liegen und den Kontakt zum Boden spüren."],
     ]),
   }),
   exercise({
@@ -627,8 +647,10 @@ export const CATALOG_EXERCISES: Exercise[] = [
     },
     steps: steps([
       ["stand", "Hände an die Wand, ein Fuß weit hinten, hintere Ferse bleibt am Boden."],
-      ["lunge", "Vorderes Knie beugen, hinteres Bein lang. 20 Sekunden, dann Seite wechseln.", 20],
-      ["stand", "Ausschütteln. Waden dürfen warm sein, nicht brennen."],
+      ["lunge", "Vorderes Knie beugen, hinteres Bein lang. Zwanzig Sekunden.", 16],
+      ["stand", "Seite wechseln."],
+      ["lungeOther", "Andere Wade, gleiche Länge.", 16],
+      ["shakeOut", "Ausschütteln. Waden dürfen warm sein, nicht brennen."],
     ]),
   }),
   exercise({
@@ -646,8 +668,10 @@ export const CATALOG_EXERCISES: Exercise[] = [
     },
     steps: steps([
       ["stand", "Stehen oder sitzen. Einatmen, Schultern zu den Ohren."],
-      ["chestOpen", "Ausatmen und die Schultern fallen lassen, schwerer als du denkst. Drei Runden.", 16],
-      ["sit", "Arme hängen. Nichts weiter aufrichten."],
+      ["shrug", "Hochziehen.", 6],
+      ["shouldersDown", "Ausatmen und die Schultern fallen lassen, schwerer als du denkst.", 10],
+      ["shrug", "Noch einmal hoch.", 6],
+      ["shouldersDown", "Wieder fallen lassen. Drei Runden reichen.", 10],
     ]),
   }),
   exercise({
@@ -666,7 +690,9 @@ export const CATALOG_EXERCISES: Exercise[] = [
     },
     steps: steps([
       ["stand", "Aufstehen. Kein Ziel, nur ein paar Meter."],
-      ["tree", "Langsam gehen. Bei jedem Schritt: Ferse, Fußballen, Zehen.", 40],
+      ["walkLeft", "Langsam gehen. Ferse, Fußballen, Zehen – ein Fuß.", 8],
+      ["walkRight", "Der andere Fuß. Gleich langsam.", 8],
+      ["walkLeft", "Weiter: nur merken, dass die Füße den Boden treffen.", 10],
       ["stand", "Stehen bleiben. Einen Atemzug, dann zurück zu dem, was als Nächstes da ist."],
     ]),
   }),

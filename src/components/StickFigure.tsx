@@ -27,13 +27,17 @@ export function StickFigure({ pose, className, accent = "#D97657" }: Props) {
         <g transform={`rotate(${angles.torso})`}>
           <line x1="0" y1="0" x2="0" y2="-62" />
           <g transform="translate(0 -62)">
-            <Arm upper={angles.leftUpperArm} fore={angles.leftForearm} />
-            <Arm upper={angles.rightUpperArm} fore={angles.rightForearm} />
+            <Arm upper={angles.leftUpperArm} fore={angles.leftForearm} hand={angles.leftHand} />
+            <Arm upper={angles.rightUpperArm} fore={angles.rightForearm} hand={angles.rightHand} />
             <g transform={`rotate(${angles.neck}) translate(0 -22)`}>
               <circle r="17" fill="#FFFBF4" stroke="#1F3F37" strokeWidth="7" />
               <circle cx="-5" cy="-1" r="1.6" fill="#1F3F37" />
               <circle cx="5" cy="-1" r="1.6" fill="#1F3F37" />
-              <circle cx="8" cy="4" r="2.2" fill={accent} />
+              {angles.jaw > 0 ? (
+                <path d={`M -5 7 Q 0 ${9 + angles.jaw} 5 7`} stroke="#1F3F37" strokeWidth="3" fill="none" />
+              ) : (
+                <circle cx="8" cy="4" r="2.2" fill={accent} />
+              )}
             </g>
           </g>
         </g>
@@ -54,12 +58,15 @@ function Limb({ thigh, shin }: { thigh: number; shin: number }) {
   );
 }
 
-function Arm({ upper, fore }: { upper: number; fore: number }) {
+function Arm({ upper, fore, hand }: { upper: number; fore: number; hand: number }) {
   return (
     <g transform={`rotate(${upper})`}>
       <line x1="0" y1="0" x2="0" y2="38" />
       <g transform={`translate(0 38) rotate(${fore})`}>
         <line x1="0" y1="0" x2="0" y2="34" />
+        <g transform={`translate(0 34) rotate(${hand})`}>
+          <line x1="0" y1="0" x2="0" y2="12" strokeWidth="6" />
+        </g>
       </g>
     </g>
   );
