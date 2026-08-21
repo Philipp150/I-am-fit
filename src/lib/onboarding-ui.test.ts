@@ -12,7 +12,7 @@ describe("60-second onboarding UI", () => {
     expect(home).toContain("OnboardingFlow");
     expect(home).toContain("shouldShowOnboarding");
     expect(home).toContain("OnboardingReminder");
-    expect(home).toContain("Erinnerung um");
+    expect(home).toContain("Unwohl");
     expect(home).not.toContain("Diese drei in den Plan");
     expect(home).not.toContain("ex-mantra-here");
     expect(home).not.toContain("adoptStarters");
@@ -24,7 +24,8 @@ describe("60-second onboarding UI", () => {
   it("keeps the flow German, offline-capable, and free of account pressure", () => {
     const onboarding = read("../components/Onboarding.tsx");
     expect(onboarding).toContain("Was merkst du gerade?");
-    expect(onboarding).toContain("Nacken, 5 Minuten, Büro");
+    expect(onboarding).toContain("QUICK_PATHS");
+    expect(onboarding).toContain("Erinnerung um {time} an");
     expect(onboarding).toContain("Kein Konto");
     expect(onboarding).toContain("Das reicht für heute");
     expect(onboarding).toContain("Erst mal umsehen");

@@ -204,8 +204,8 @@ export default function HomePage() {
             <p className="font-display text-xl">YouTube / Instagram</p>
           </Link>
           <Link href="/complaints" className="rounded-[1.4rem] bg-forest-dark px-4 py-5 text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-forest">
-            <p className="text-xs uppercase tracking-widest">Thema</p>
-            <p className="font-display text-xl">Worum soll’s gehen?</p>
+            <p className="text-xs uppercase tracking-widest">Unwohl</p>
+            <p className="font-display text-xl">Übungen vorschlagen</p>
           </Link>
         </div>
       )}
