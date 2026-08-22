@@ -73,10 +73,11 @@ npm install
 cp .env.example .env.local
 npm test
 npm run lint
+npm run build
 npm run dev
 ```
 
-Katalog-SQL neu: `npm run seed:sql`. CI auf Push/PR: `npm test` und `npm run lint`. Vercel Production führt `next build` inkl. TypeScript aus; fehlende Exporte (z. B. `getProfile`) oder `null` in `CaptionTrack[]` stoppen den Deploy. Dexie `orderBy` nur auf indizierten Feldern: `exercises.title` ist kein Index – Sortierung im Speicher, sonst `SchemaError` und die Next.js-Fehlerseite.
+Katalog-SQL neu: `npm run seed:sql`. CI auf **jedem** Push und PR (nicht nur `main`): `npm test`, `npm run lint` und `npm run build` (`next build`, dieselbe Command wie Vercel). Ohne Production-Build in der CI rutschen TypeScript-, Webpack- und `next.config`-Fehler durch (`CaptionTrack`/`null`, verschachteltes `getProfile`, `transpilePackages` vs `serverExternalPackages` bei MediaPipe/Tesseract, fehlendes `ThemeChips`). Dexie `orderBy` nur auf indizierten Feldern: `exercises.title` ist kein Index – Sortierung im Speicher, sonst `SchemaError` und die Next.js-Fehlerseite.
 
 ## 5. Phasen
 

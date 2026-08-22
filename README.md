@@ -62,12 +62,13 @@ npm install
 cp .env.example .env.local
 npm test
 npm run lint
+npm run build
 npm run dev
 ```
 
 Katalog-SQL neu erzeugen: `npm run seed:sql` (danach `schema.sql` und `seed.sql` zu `setup.sql` zusammenfügen). Raster-Icons: `npm run icons`.
 
-CI (GitHub Actions auf Push und Pull Request) führt `npm test` und `npm run lint` aus.
+CI (GitHub Actions auf jedem Push und Pull Request, nicht nur `main`) führt `npm test`, `npm run lint` und `npm run build` aus – dieselbe Production-Command wie Vercel (`next build`).
 
 ## Aufs Handy
 

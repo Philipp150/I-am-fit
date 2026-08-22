@@ -48,6 +48,7 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] Tests für Plan-Logik, Repository-Schalter (lokal/Cloud) und kritische UI-Pfade
 - [x] Fehlerfälle beim Import klarer machen (ungültiger Link, fehlende Metadaten)
 - [x] Tests für Plan-Einladung annehmen (Snapshot, Attribution, keine anderen Pläne überschreiben)
+- [x] `npm run build` (`next build`) in der GitHub-CI auf jedem Push und PR, nicht nur test/lint
 
 ## Erinnerungen und Offline (Phase B)
 
@@ -159,3 +160,10 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] Katalognamen ohne Diagnose (Nacken, Rücken, Bauch, Büro, …); IDs `complaints` / `comp-*` bleiben
 - [x] Übung „Mitte wecken“ als Bauch-Thema, 60 Sekunden
 - [x] Tests, Lint, Production-Build
+
+## Betrieb (Vercel, wiederkehrende Rots)
+
+- [x] Letzter roter Deploy SHA `2d5ed1e` (`dpl_5hWaWxGA2EKQffh4HvRNPppGoS11`): Onboarding importierte `@/components/ThemeChips`, Datei fehlte (`Module not found`). Folgecommits haben die Datei bzw. den Import geheilt; Production `c69ba90` war wieder grün
+- [x] Frühere Rots derselben Klasse: `55d8972` CaptionTrack `null`; `5cb5bd2` `getProfile` in `addCompletion`; `0fb0494` MediaPipe `transpilePackages`+`serverExternalPackages`; `f7d4f96` dasselbe für `tesseract.js`
+- [x] Ursache: GitHub-CI nur `npm test` + `npm run lint`, kein `next build`; Feature-Branch-Pushes (Vercel Preview) hatten gar keine CI (`on.push.branches: [main]`). Vitest liest oft nur Dateitext und sieht fehlende Module / next.config-Konflikte nicht
+- [x] Guard: CI auf jedem Push/PR mit `npm run build`; Tests, dass der Workflow die Command enthält, `@/`-Imports auflösbar sind, next.config keine Package-Schnittmenge hat, ThemeChips existiert, CaptionTrack/`getProfile` nicht zurückfallen
