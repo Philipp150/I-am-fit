@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { analyzeClip, PoseAnalyzeError } from "@/lib/pose-analyze";
-import { mediaPipeDetector } from "@/lib/pose-landmarker";
+import { useEffect, useRef, useState } from "react";
+import { analyzeClip, PoseAnalyzeError, type AnalyzeProgress } from "@/lib/pose-analyze";
+import { mediaPipeDetector, preparePoseLandmarker } from "@/lib/pose-landmarker";
 import {
   acceptVideoFile,
   pixelAvailabilityForUrl,
@@ -10,7 +10,7 @@ import {
   POSE_COPY,
 } from "@/lib/pose-source";
 import { hasPlayableTrack, type PoseTrack } from "@/lib/pose-track";
-import { createTesseractReader } from "@/lib/video-ocr";
+import { createTesseractReader, type FrameTextReader } from "@/lib/video-ocr";
 import {
   motionFromTrack,
   pauseResumeTimes,
@@ -18,7 +18,12 @@ import {
   type TimedCaptionCue,
   type VideoTextSuggestion,
 } from "@/lib/video-text";
+import type { ExerciseStep } from "@/lib/types";
+import { PoseTrackCompare } from "./PoseTrackCompare";
 import { Field } from "./ui";
+
+/** OCR is a bonus. If Tesseract is not ready by then, the movement track runs without it. */
+const OCR_INIT_TIMEOUT_MS = 25_000;
 
 type Props = {
   value?: PoseTrack | null;
@@ -27,8 +32,28 @@ type Props = {
   captionCues?: TimedCaptionCue[];
   existingTitle?: string;
   existingSummary?: string;
+  steps?: ExerciseStep[];
   onChange: (track: PoseTrack | null, suggestion?: VideoTextSuggestion) => void;
 };
+
+/** Detached video elements do not always decode on mobile Safari, so the clip lives in the page. */
+function createOffscreenVideo(): HTMLVideoElement {
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.setAttribute("aria-hidden", "true");
+  video.style.cssText = "position:fixed;left:-9999px;top:0;width:2px;height:2px;opacity:0;pointer-events:none";
+  document.body.appendChild(video);
+  return video;
+}
+
+function releaseVideo(video: HTMLVideoElement, objectUrl?: string) {
+  video.removeAttribute("src");
+  video.load();
+  video.remove();
+  if (objectUrl) URL.revokeObjectURL(objectUrl);
+}
 
 export function PoseTrackCapture({
   value,
@@ -37,29 +62,57 @@ export function PoseTrackCapture({
   captionCues,
   existingTitle,
   existingSummary,
+  steps = [],
   onChange,
 }: Props) {
   const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState<string | null>(null);
+  const [progress, setProgress] = useState<AnalyzeProgress | null>(null);
+  const [readingText, setReadingText] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const cancelRef = useRef<{ aborted: boolean }>({ aborted: false });
   const availability = pixelAvailabilityForUrl(sourceUrl);
-  const notice = pixelNotice(availability);
   const hasTrack = hasPlayableTrack(value);
+  // Once a clip has been read the "no pixels" hint is stale, and telling someone who just uploaded
+  // a file that there is no file reads as if the upload never arrived. The error says what to do.
+  const notice = hasTrack || busy || error ? "" : pixelNotice(availability);
 
-  async function runAnalysis(video: HTMLVideoElement, sourceKind: "upload" | "file-url", revokeUrl?: string) {
+  useEffect(() => {
+    const cancel = cancelRef.current;
+    return () => {
+      cancel.aborted = true;
+    };
+  }, []);
+
+  async function runAnalysis(video: HTMLVideoElement, sourceKind: "upload" | "file-url", objectUrl?: string) {
+    const cancel = { aborted: false };
+    cancelRef.current = cancel;
     setBusy(true);
     setError(null);
     setNote(null);
-    setProgress(`${POSE_COPY.progress} ${POSE_COPY.ocrProgress}`);
-    const reader = await createTesseractReader().catch(() => null);
+    setReadingText(false);
+    setProgress({ ratio: 0, label: POSE_COPY.modelProgress, phase: "model" });
+
+    // Kept as a promise so a reader that shows up after the timeout is still disposed of.
+    const readerPromise: Promise<FrameTextReader | null> = createTesseractReader().catch(() => null);
+
     try {
-      const { track, ocrCues } = await analyzeClip({
+      await preparePoseLandmarker();
+      if (cancel.aborted) throw new PoseAnalyzeError("cancelled", POSE_COPY.cancelled);
+      const readText = await Promise.race([
+        readerPromise,
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), OCR_INIT_TIMEOUT_MS)),
+      ]);
+      if (cancel.aborted) throw new PoseAnalyzeError("cancelled", POSE_COPY.cancelled);
+      setReadingText(Boolean(readText));
+
+      const { track, ocrCues, detectionRate, smallPerson } = await analyzeClip({
         video,
         detect: (image, timeSec) => mediaPipeDetector.detect(image, timeSec),
-        readText: reader ? (image, timeSec) => reader.read(image, timeSec) : undefined,
+        readText: readText ? (image, timeSec) => readText.read(image, timeSec) : undefined,
         sourceKind,
-        onProgress: (state) => setProgress(`${state.label} ${Math.round(state.ratio * 100)} %`),
+        cancel,
+        onProgress: setProgress,
       });
       const pauseTimes = pauseResumeTimes(motionFromTrack(track), track.fps);
       const suggestion = suggestFromVideoText({
@@ -74,8 +127,10 @@ export function PoseTrackCapture({
       onChange(track, suggestion);
       const notes: string[] = [];
       if (video.duration > 90) notes.push(POSE_COPY.truncated);
+      if (detectionRate < 0.85) notes.push(POSE_COPY.partial(detectionRate));
+      if (smallPerson) notes.push(POSE_COPY.personSmall);
       if (suggestion.foundText) notes.push(POSE_COPY.ocrApplied);
-      if (notes.length) setNote(notes.join(" "));
+      setNote(notes.length ? notes.join(" ") : null);
     } catch (err) {
       const message =
         err instanceof PoseAnalyzeError
@@ -85,12 +140,11 @@ export function PoseTrackCapture({
             : POSE_COPY.loadFailed;
       setError(message);
     } finally {
-      await reader?.dispose?.().catch(() => undefined);
-      if (revokeUrl) URL.revokeObjectURL(revokeUrl);
-      video.removeAttribute("src");
-      video.load();
+      await readerPromise.then((created) => created?.dispose?.()).catch(() => undefined);
+      releaseVideo(video, objectUrl);
       setBusy(false);
       setProgress(null);
+      setReadingText(false);
     }
   }
 
@@ -100,24 +154,22 @@ export function PoseTrackCapture({
       return;
     }
     const url = URL.createObjectURL(file);
-    const video = document.createElement("video");
-    video.muted = true;
-    video.playsInline = true;
-    video.preload = "auto";
+    const video = createOffscreenVideo();
     video.src = url;
     await runAnalysis(video, "upload", url);
   }
 
   async function analyzePublicFile() {
     if (availability.kind !== "public-file") return;
-    const video = document.createElement("video");
-    video.muted = true;
-    video.playsInline = true;
-    video.preload = "auto";
+    const video = createOffscreenVideo();
     video.crossOrigin = "anonymous";
     video.src = availability.url;
     await runAnalysis(video, "file-url");
   }
+
+  const percent = progress ? Math.round(progress.ratio * 100) : 0;
+  const frameHint =
+    progress?.frame && progress?.frames ? ` · ${POSE_COPY.frameCount(progress.frame, progress.frames)}` : "";
 
   return (
     <div className="space-y-3 rounded-[1.4rem] border border-sand/80 bg-paper/70 p-3">
@@ -137,6 +189,7 @@ export function PoseTrackCapture({
           {POSE_COPY.hasTrack(value.durationSec, value.fps)}
         </p>
       )}
+      {hasTrack && value && !busy && <PoseTrackCompare track={value} steps={steps} />}
       <Field label={POSE_COPY.uploadLabel}>
         <input
           type="file"
@@ -161,19 +214,43 @@ export function PoseTrackCapture({
         </button>
       )}
       {busy && (
-        <p className="text-sm text-forest-dark" role="status" aria-live="polite">
-          {progress ?? `${POSE_COPY.progress} ${POSE_COPY.ocrProgress}`}
-        </p>
+        <div className="space-y-2">
+          <p className="text-sm text-forest-dark" role="status" aria-live="polite">
+            {progress?.label ?? POSE_COPY.progress}
+            {progress?.phase === "pose" ? ` ${percent} %${frameHint}` : ""}
+            {progress?.phase === "pose" && readingText ? ` ${POSE_COPY.ocrProgress}` : ""}
+          </p>
+          <div
+            className="h-1.5 w-full overflow-hidden rounded-full bg-sand"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent}
+            aria-label={POSE_COPY.progress}
+          >
+            <div className="h-full rounded-full bg-forest transition-[width]" style={{ width: `${percent}%` }} />
+          </div>
+          <button
+            type="button"
+            className="text-sm text-clay underline"
+            onClick={() => {
+              cancelRef.current.aborted = true;
+            }}
+          >
+            {POSE_COPY.cancel}
+          </button>
+        </div>
       )}
       {note && !busy && (
         <p className="text-sm text-forest-light" role="status">
           {note}
         </p>
       )}
-      {error && (
-        <p className="rounded-2xl bg-clay/15 px-3 py-2 text-sm text-forest-dark" role="alert">
-          {error}
-        </p>
+      {error && !busy && (
+        <div className="rounded-2xl bg-clay/15 px-3 py-2 text-sm text-forest-dark" role="alert">
+          <p>{error}</p>
+          <p className="mt-1 text-forest-light">{POSE_COPY.retry} – wähle die Datei unten noch einmal aus.</p>
+        </div>
       )}
       {hasTrack && (
         <button

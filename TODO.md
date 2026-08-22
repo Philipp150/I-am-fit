@@ -167,3 +167,18 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] Frühere Rots derselben Klasse: `55d8972` CaptionTrack `null`; `5cb5bd2` `getProfile` in `addCompletion`; `0fb0494` MediaPipe `transpilePackages`+`serverExternalPackages`; `f7d4f96` dasselbe für `tesseract.js`
 - [x] Ursache: GitHub-CI nur `npm test` + `npm run lint`, kein `next build`; Feature-Branch-Pushes (Vercel Preview) hatten gar keine CI (`on.push.branches: [main]`). Vitest liest oft nur Dateitext und sieht fehlende Module / next.config-Konflikte nicht
 - [x] Guard: CI auf jedem Push/PR mit `npm run build`; Tests, dass der Workflow die Command enthält, `@/`-Imports auflösbar sind, next.config keine Package-Schnittmenge hat, ThemeChips existiert, CaptionTrack/`getProfile` nicht zurückfallen
+
+## Bewegungsspur reparieren (Ableiten aus Video)
+
+- [x] Fehlerbild bestätigt: nicht das Laden der Assets, sondern die Abbildung Landmark → Gliederpuppe war falsch (SVG-Drehsinn, Elternkette, Spiegelung, Seitenverhältnis)
+- [x] Winkel in SVG-Konvention messen (`svgAngleDown` / `svgAngleUp`), Kindknochen relativ zum Elternknochen, Figur spiegelt den Clip
+- [x] Körperlage einmal pro Clip entscheiden statt pro Bild; widersprüchliche Bilder als Erkennungsfehler verwerfen (`dropOrientationOutliers`, `applyClipOrientation`)
+- [x] Kopfneigung: konstanten Kameraversatz je Clip abziehen (`normalizeNeckBias`), Bewegung bleibt
+- [x] Verschwundene Gelenke driften zur neutralen Pose statt einzufrieren; kurze Lücken mit dem letzten guten Bild überbrücken
+- [x] Hüftweg in Rumpflängen normalisieren, Glättung mit Winkel-Wraparound, sauberer Loop-Schluss
+- [x] Abtastbudget (max. 300 Pose-Frames, adaptive fps) und OCR-Budget (max. 14 Lesungen, Konfidenzschwelle)
+- [x] MediaPipe-WASM von der eigenen Domain (`scripts/copy-mediapipe-wasm.mjs`), CDN als Reserve, Timeouts für Modell- und OCR-Start
+- [x] Deutsche UX: Phasen mit Prozent und Bildzähler, Abbrechen, Wiederholen, Erkennungsrate, „Person recht klein im Bild“, Vorher/Nachher (`PoseTrackCompare`)
+- [x] Hinweis „ohne Videodatei“ nicht mehr neben einem Fehler zeigen, nachdem eine Datei gewählt wurde
+- [x] Ende zu Ende im Headless-Browser gemessen (lokaler Production-Build und Live): Kniebeuge-Clip 7,1 s → Spur 6,6 KB / 72 Bilder / 10 fps in 7,3 s; 92-s-Clip → 26 KB / 298 Bilder / 3,3 fps in 25 s (vorher 83 s); Spur überlebt Reload; Figur zeigt 8 von 8 verschiedene Haltungen
+- [x] Tests für Abbildung, leere und unsichere Erkennungen, Glättung, Spur gegen Fallback; Lint und Production-Build grün

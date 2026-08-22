@@ -2,10 +2,23 @@ import { lerpPose, POSES, type JointAngles } from "./poses";
 
 export const POSE_TRACK_VERSION = 1 as const;
 export const POSE_TRACK_DEFAULT_FPS = 10;
-export const POSE_TRACK_MIN_FPS = 8;
+export const POSE_TRACK_MIN_FPS = 2;
 export const POSE_TRACK_MAX_FPS = 12;
 export const POSE_TRACK_MAX_DURATION_SEC = 90;
 export const POSE_TRACK_MAX_JSON_BYTES = 400_000;
+
+/**
+ * Every sample costs a seek plus a WASM inference. A long clip at the full frame rate ran for
+ * minutes on a phone and looked like a hang, so the analysis spends a fixed budget of samples and
+ * lowers the frame rate for longer clips instead.
+ */
+export const POSE_TRACK_MAX_SAMPLES = 300;
+
+export function sampleFpsForDuration(durationSec: number, maxSamples = POSE_TRACK_MAX_SAMPLES): number {
+  const clipped = Math.min(Math.max(0.1, durationSec), POSE_TRACK_MAX_DURATION_SEC);
+  const fps = Math.min(POSE_TRACK_DEFAULT_FPS, maxSamples / clipped);
+  return Math.max(POSE_TRACK_MIN_FPS, Math.round(fps * 10) / 10);
+}
 
 export const JOINT_KEYS = [
   "hipX",
@@ -65,6 +78,58 @@ export function frameToPose(values: number[] | undefined, joints: readonly Joint
 
 export function estimateTrackJsonBytes(track: PoseTrack): number {
   return new TextEncoder().encode(JSON.stringify(track)).length;
+}
+
+/** Joints that are rotations and therefore have to be blended along the shorter arc. */
+const ANGLE_KEYS = new Set<JointKey>([
+  "bodyTilt",
+  "torso",
+  "neck",
+  "leftUpperArm",
+  "leftForearm",
+  "leftHand",
+  "rightUpperArm",
+  "rightForearm",
+  "rightHand",
+  "leftThigh",
+  "leftShin",
+  "rightThigh",
+  "rightShin",
+]);
+
+function shortestArc(from: number, to: number): number {
+  let delta = (to - from) % 360;
+  if (delta > 180) delta -= 360;
+  if (delta <= -180) delta += 360;
+  return delta;
+}
+
+function blend(key: JointKey, from: number, to: number, t: number): number {
+  if (ANGLE_KEYS.has(key)) return from + shortestArc(from, to) * t;
+  return from + (to - from) * t;
+}
+
+/**
+ * Landmarks jitter a few pixels per frame, which reads as a shivering mannequin. A forward and a
+ * backward pass of the same exponential filter cancel each other's lag, so the motion stays in
+ * time with the clip instead of trailing behind it.
+ */
+export function smoothPoseSeries(poses: JointAngles[], alpha = 0.45): JointAngles[] {
+  if (poses.length < 3 || alpha <= 0) return poses.map((pose) => ({ ...pose }));
+  const factor = Math.min(1, alpha);
+  const forward: JointAngles[] = [{ ...poses[0] }];
+  for (let i = 1; i < poses.length; i++) {
+    const previous = forward[i - 1];
+    const next = { ...poses[i] };
+    for (const key of JOINT_KEYS) next[key] = blend(key, previous[key] ?? 0, poses[i][key] ?? 0, factor);
+    forward.push(next);
+  }
+  const out = forward.map((pose) => ({ ...pose }));
+  for (let i = out.length - 2; i >= 0; i--) {
+    const later = out[i + 1];
+    for (const key of JOINT_KEYS) out[i][key] = blend(key, forward[i][key] ?? 0, later[key] ?? 0, factor);
+  }
+  return out;
 }
 
 function downsampleFrames(frames: number[][], factor: number): number[][] {
@@ -189,10 +254,22 @@ export function sampleTrackPose(
     return { pose: frameToPose(track.frames[0], joints), t, finished, index: 0 };
   }
 
-  const pos = duration <= 0 ? 0 : (t / duration) * (n - 1);
-  const i0 = Math.min(n - 1, Math.max(0, Math.floor(pos)));
-  const i1 = Math.min(n - 1, i0 + 1);
-  const frac = pos - i0;
+  let i0: number;
+  let i1: number;
+  let frac: number;
+  if (loop) {
+    // Treat the frames as a ring so the wrap from the last frame back to the first is one more
+    // interpolated step instead of a visible jump every time the loop restarts.
+    const pos = duration <= 0 ? 0 : (t / duration) * n;
+    i0 = ((Math.floor(pos) % n) + n) % n;
+    i1 = (i0 + 1) % n;
+    frac = pos - Math.floor(pos);
+  } else {
+    const pos = duration <= 0 ? 0 : (t / duration) * (n - 1);
+    i0 = Math.min(n - 1, Math.max(0, Math.floor(pos)));
+    i1 = Math.min(n - 1, i0 + 1);
+    frac = pos - i0;
+  }
   const pose = lerpPose(frameToPose(track.frames[i0], joints), frameToPose(track.frames[i1], joints), frac);
   return { pose, t, finished, index: i0 };
 }

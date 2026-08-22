@@ -2,10 +2,31 @@ import { parseInstagramShortcode, parseYoutubeVideoId } from "./source-video";
 
 export const POSE_COPY = {
   progress: "Bewegung wird erkannt …",
+  modelProgress: "Bewegungserkennung wird geladen (einmalig, ca. 6 MB) …",
+  finishing: "Bewegungsspur wird geglättet …",
+  cancel: "Abbrechen",
+  cancelled: "Erkennen abgebrochen. Du kannst es jederzeit neu starten.",
+  retry: "Noch einmal versuchen",
+  frameCount: (frame: number, frames: number) => `Bild ${frame} von ${frames}`,
+  personTooSmall:
+    "Die Person ist im Bild zu klein für eine Bewegungsspur. Filme näher dran oder schneide den Clip enger zu.",
+  personSmall:
+    "Die Person ist recht klein im Bild – die Spur bleibt grob. Näher dran gefilmt wird die Figur genauer.",
+  tooFewPeopleFrames: (rate: number) =>
+    `Nur in ${Math.round(rate * 100)} % der Bilder war eine Person zu sehen – zu wenig für eine Bewegungsspur. Nimm einen Clip, in dem der ganze Körper ruhig im Bild bleibt.`,
+  partial: (rate: number) =>
+    `In ${Math.round(rate * 100)} % der Bilder war eine Person zu sehen. In den Lücken hält die Figur die letzte erkannte Haltung.`,
+  unreadableFile:
+    "Diese Datei ließ sich nicht öffnen. Probiere mp4, webm oder mov – oder exportiere den Clip noch einmal.",
+  compareBefore: "Vorher: gewählte Pose",
+  compareAfter: "Jetzt: Bewegungsspur",
+  compareHint:
+    "Links die Pose aus dem Schritt, rechts die Bewegung aus deinem Clip. Bewegt sich rechts anders, hat das Erkennen geklappt.",
   ocrProgress: "Text im Video wird gelesen …",
   ocrApplied:
     "Text im Video wurde gelesen und in Titel, Kurztext und Schritte übernommen. Du kannst alles weiter anpassen.",
-  noPerson: "Keine Person im Video gefunden. Nimm einen Clip, in dem der Körper gut zu sehen ist.",
+  noPerson:
+    "Keine Person im Video gefunden. Nimm einen Clip, in dem der ganze Körper gut zu sehen ist: hell genug, nicht zu weit weg, Kopf bis Füße im Bild.",
   loadFailed: "Die Bewegungserkennung konnte nicht geladen werden. Prüfe die Verbindung und versuche es erneut.",
   youtube:
     "YouTube liefert in der App keine Pixel – die Einbettung wird nicht analysiert (weder Bewegung noch eingeblendeter Text). Metadaten und Untertitel bleiben. Lade die Datei oder einen kurzen Clip hoch, damit die Figur der Bewegung folgt und Text im Bild gelesen werden kann.",
