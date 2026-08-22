@@ -39,3 +39,6 @@ yarn-error.log*
 next-env.d.ts
 .vercel
 supabase/.temp/
+
+# copied from node_modules by scripts/copy-mediapipe-wasm.mjs on every build
+/public/mediapipe/

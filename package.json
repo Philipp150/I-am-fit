@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "npm run assets:mediapipe && next dev --turbopack",
+    "prebuild": "npm run assets:mediapipe",
     "build": "next build",
+    "assets:mediapipe": "node scripts/copy-mediapipe-wasm.mjs",
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
