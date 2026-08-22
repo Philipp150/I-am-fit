@@ -1,18 +1,74 @@
 "use client";
 
+import { useState } from "react";
 import { CategoryPicker } from "@/components/CategoryPicker";
+import { PosePicker } from "@/components/PosePicker";
 import { PosePlayer } from "@/components/PosePlayer";
 import { PoseTrackCapture } from "@/components/PoseTrackCapture";
-import { StickFigure } from "@/components/StickFigure";
 import { Card, Field, fieldClass } from "@/components/ui";
 import { applyPoseOverride, applyStepPatch, emptyStep, patchDraft } from "@/lib/exercise-draft";
 import { formatStepClock } from "@/lib/player";
-import { POSE_IDS, POSE_LABELS } from "@/lib/poses";
+import { formatTrackSeconds } from "@/lib/pose-source";
+import { hasPlayableTrack } from "@/lib/pose-track";
 import type { Category, Complaint, DraftExercise, ExerciseKind, PoseId } from "@/lib/types";
 import { applyAnalysisToDraft, type TimedCaptionCue } from "@/lib/video-text";
 
 function toggle(list: string[], id: string): string[] {
   return list.includes(id) ? list.filter((item) => item !== id) : [...list, id];
+}
+
+/**
+ * With a movement track the figure plays the clip, and the per-step poses only apply once the track
+ * is gone. Saying so – and asking before dropping a track that took a minute to analyse – beats
+ * letting the pose buttons look as if they were being ignored.
+ */
+function TrackOrPose({ value, onChange }: { value: DraftExercise; onChange: (next: DraftExercise) => void }) {
+  const [asking, setAsking] = useState(false);
+  const track = value.poseTrack;
+  if (!hasPlayableTrack(track)) return null;
+
+  return (
+    <div className="mb-4 rounded-2xl bg-sage/35 p-3">
+      <p className="font-display text-lg text-forest-dark">Die Figur folgt der Bewegungsspur</p>
+      <p className="mt-1 text-sm text-ink/80">
+        Aus dem Clip erkannt: {formatTrackSeconds(track.durationSec)}, {track.frames.length} Bilder. Die Posen bei den
+        Schritten sind so lange nur die Reserve – sie greifen erst ohne Spur.
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button
+          type="button"
+          aria-pressed={!asking}
+          className="rounded-full bg-forest px-4 py-2 text-sm text-cream"
+          onClick={() => setAsking(false)}
+        >
+          Spur verwenden
+        </button>
+        <button
+          type="button"
+          aria-pressed={asking}
+          className="rounded-full border border-forest/30 bg-white/60 px-4 py-2 text-sm text-forest-dark"
+          onClick={() => setAsking(true)}
+        >
+          Pose wählen
+        </button>
+      </div>
+      {asking && (
+        <div className="mt-2 rounded-2xl bg-white/70 p-2 text-sm text-forest-dark" role="status">
+          <p>Dafür wird die Bewegungsspur entfernt. Ein neuer Clip kann sie jederzeit wieder erzeugen.</p>
+          <button
+            type="button"
+            className="mt-2 text-clay underline"
+            onClick={() => {
+              onChange(patchDraft(value, { poseTrack: undefined }));
+              setAsking(false);
+            }}
+          >
+            Spur entfernen und Posen nutzen
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ExerciseEditor({
@@ -32,6 +88,7 @@ export function ExerciseEditor({
   captions?: string;
   captionCues?: TimedCaptionCue[];
 }) {
+  const trackDrivesFigure = hasPlayableTrack(value.poseTrack);
   return (
     <div className="space-y-4">
       <Field label="Titel">
@@ -135,6 +192,7 @@ export function ExerciseEditor({
             <PosePlayer steps={value.steps} poseTrack={value.poseTrack} autoPlay={false} loop={false} />
           </div>
         )}
+        <TrackOrPose value={value} onChange={onChange} />
         <div className="space-y-4">
           {value.steps.map((step, index) => (
             <div key={index} className="rounded-2xl bg-paper p-3">
@@ -153,23 +211,14 @@ export function ExerciseEditor({
                 )}
               </div>
               <p className="mb-1 text-xs text-forest-light">Pose für die Figur</p>
-              <div className="grid grid-cols-5 gap-2">
-                {POSE_IDS.map((pose) => (
-                  <button
-                    key={pose}
-                    type="button"
-                    onClick={() =>
-                      onChange(patchDraft(value, { steps: applyPoseOverride(value.steps, index, pose as PoseId) }))
-                    }
-                    className={`rounded-xl p-1 ${step.pose === pose ? "bg-sage" : "bg-white/50"}`}
-                    title={POSE_LABELS[pose]}
-                    aria-label={POSE_LABELS[pose]}
-                    aria-pressed={step.pose === pose}
-                  >
-                    <StickFigure pose={pose} className="h-14 w-full" />
-                  </button>
-                ))}
-              </div>
+              <PosePicker
+                value={step.pose}
+                stepText={step.text}
+                secondary={trackDrivesFigure}
+                onChange={(pose: PoseId) =>
+                  onChange(patchDraft(value, { steps: applyPoseOverride(value.steps, index, pose) }))
+                }
+              />
               <textarea
                 className={`${fieldClass} mt-2`}
                 rows={2}
