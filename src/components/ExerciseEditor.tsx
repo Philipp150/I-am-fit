@@ -125,6 +125,7 @@ export function ExerciseEditor({
             captionCues={captionCues}
             existingTitle={value.title}
             existingSummary={value.summary}
+            steps={value.steps}
             onChange={(poseTrack, suggestion) => onChange(applyAnalysisToDraft(value, poseTrack, suggestion))}
           />
         </div>
