@@ -1,5 +1,32 @@
 import type { PoseId } from "./types";
 
+/**
+ * Keyframes for the mannequin in `components/StickFigure.tsx`.
+ *
+ * Every number is an SVG `rotate()` in degrees, which turns **clockwise** on screen because y
+ * points down – the same convention the video mapping uses (`pose-map.ts`, `svgAngleDown` /
+ * `svgAngleUp`). What that means when authoring a pose:
+ *
+ * - `left*` is the limb drawn on the **screen-left** half, like a mirror. A label that says "links"
+ *   therefore means the side the viewer sees on the left. The video mapping feeds the person's
+ *   right-side landmarks into the `left*` slots for exactly the same reason.
+ * - Arms and legs are drawn along +Y, so `0` hangs straight down and a **positive angle swings the
+ *   limb toward screen-left**: `leftUpperArm: 90` is a horizontal arm pointing left, `180` points
+ *   up. For the right side the signs flip.
+ * - Child bones are relative to their parent. Bending an elbow or a knee **toward the body** is
+ *   therefore negative on the left and positive on the right. Giving the forearm the same sign as
+ *   the upper arm flings it outward, which is what used to make every seated pose look like a bird.
+ * - The neck is drawn along -Y, so its sign is inverted: positive tips the head to screen-right.
+ *   Use `tiltHead` instead of writing `neck` by hand.
+ * - `headShiftY` positive lets the head sink, negative lifts it. `shoulderLift` positive raises the
+ *   shoulders. `bodyTilt` rotates the whole figure; around -90 it reads as a profile facing
+ *   screen-left, which is how the sagittal poses (Stütze, Cobra, Katze, Liegen) are drawn.
+ *
+ * Sides always come in exact pairs: the mirrored twin is built with `mirrorPose`, never typed a
+ * second time. `poses.test.ts` measures the drawn result with `pose-geometry.ts`, so a pose that
+ * does not do what its name says fails the suite instead of shipping.
+ */
+
 export type JointAngles = {
   hipX: number;
   hipY: number;
@@ -87,653 +114,582 @@ const stand: JointAngles = {
   neck: 0,
   jaw: 0,
   leftUpperArm: 18,
-  leftForearm: 8,
+  leftForearm: -6,
   leftHand: 0,
   rightUpperArm: -18,
-  rightForearm: -8,
+  rightForearm: 6,
   rightHand: 0,
-  leftThigh: 10,
-  leftShin: 4,
-  rightThigh: -10,
-  rightShin: -4,
+  leftThigh: 9,
+  leftShin: -5,
+  rightThigh: -9,
+  rightShin: 5,
   shoulderLift: 0,
   headShiftX: 0,
   headShiftY: 0,
   chest: 0,
 };
 
+/** Head tilt in the direction a reader expects: positive leans the head toward screen-left. */
+function tiltHead(deg: number): Partial<JointAngles> {
+  return { neck: -deg, headShiftX: -Math.round(deg * 0.25) };
+}
+
+/**
+ * Cross-legged sitting. From the front a chair cannot be drawn, so the shins fold in front of the
+ * hips: thighs out, shins back toward the middle. Feet land next to each other on the floor.
+ */
 const sit: JointAngles = {
   ...stand,
-  hipX: 104,
-  hipY: 188,
-  torso: -6,
-  neck: -4,
-  leftUpperArm: 28,
-  leftForearm: 36,
-  rightUpperArm: -28,
-  rightForearm: -36,
-  leftThigh: 86,
-  leftShin: 78,
-  rightThigh: -86,
-  rightShin: -78,
+  hipY: 186,
+  torso: -3,
+  leftUpperArm: 24,
+  leftForearm: -22,
+  rightUpperArm: -24,
+  rightForearm: 22,
+  leftThigh: 66,
+  leftShin: -104,
+  rightThigh: -66,
+  rightShin: 104,
 };
 
+/** Lying on the back, head to screen-left. The whole figure is a little over 230 units long. */
 const lie: JointAngles = {
   ...stand,
-  hipX: 108,
-  hipY: 196,
-  bodyTilt: 90,
+  hipX: 104,
+  hipY: 206,
+  bodyTilt: -90,
   torso: 0,
-  neck: -6,
-  leftUpperArm: 8,
-  leftForearm: 12,
-  rightUpperArm: -8,
-  rightForearm: -12,
-  leftThigh: 8,
-  leftShin: 4,
-  rightThigh: -8,
-  rightShin: -4,
+  neck: 0,
+  leftUpperArm: 10,
+  leftForearm: -6,
+  rightUpperArm: -10,
+  rightForearm: 6,
+  leftThigh: 4,
+  leftShin: -2,
+  rightThigh: -4,
+  rightShin: 2,
+};
+
+/** All fours, head to screen-left: spine across the picture, arms and thighs down to the floor. */
+const quadruped: JointAngles = {
+  ...stand,
+  hipX: 126,
+  hipY: 150,
+  bodyTilt: -90,
+  leftUpperArm: 92,
+  leftForearm: 4,
+  rightUpperArm: 88,
+  rightForearm: -4,
+  leftThigh: 92,
+  leftShin: -22,
+  rightThigh: 88,
+  rightShin: -18,
 };
 
 function j(over: Partial<JointAngles>, base: JointAngles = stand): JointAngles {
   return { ...base, ...over };
 }
 
+const MIRROR_AXIS = 2 * stand.hipX;
+
+/** The same pose seen from the other side. Sides swap and every rotation flips its sign. */
+export function mirrorPose(pose: JointAngles): JointAngles {
+  return {
+    hipX: MIRROR_AXIS - pose.hipX,
+    hipY: pose.hipY,
+    bodyTilt: -pose.bodyTilt,
+    torso: -pose.torso,
+    neck: -pose.neck,
+    jaw: pose.jaw,
+    leftUpperArm: -pose.rightUpperArm,
+    leftForearm: -pose.rightForearm,
+    leftHand: -(pose.rightHand ?? 0),
+    rightUpperArm: -pose.leftUpperArm,
+    rightForearm: -pose.leftForearm,
+    rightHand: -(pose.leftHand ?? 0),
+    leftThigh: -pose.rightThigh,
+    leftShin: -pose.rightShin,
+    rightThigh: -pose.leftThigh,
+    rightShin: -pose.leftShin,
+    shoulderLift: pose.shoulderLift ?? 0,
+    headShiftX: -(pose.headShiftX ?? 0),
+    headShiftY: pose.headShiftY ?? 0,
+    chest: pose.chest ?? 0,
+  };
+}
+
+const reachUp = j({
+  leftUpperArm: 152,
+  leftForearm: -12,
+  rightUpperArm: -152,
+  rightForearm: 12,
+  headShiftY: -3,
+  chest: 5,
+});
+
+const fold = j({
+  hipY: 150,
+  torso: -88,
+  neck: -6,
+  leftUpperArm: 94,
+  leftForearm: 6,
+  rightUpperArm: 86,
+  rightForearm: -6,
+  leftThigh: 6,
+  leftShin: -3,
+  rightThigh: -6,
+  rightShin: 3,
+});
+
+const squat = j({
+  hipY: 170,
+  torso: 7,
+  leftUpperArm: 42,
+  leftForearm: -76,
+  rightUpperArm: -42,
+  rightForearm: 76,
+  leftThigh: 52,
+  leftShin: -52,
+  rightThigh: -52,
+  rightShin: 52,
+});
+
+const lunge = j({
+  hipX: 104,
+  hipY: 166,
+  torso: -6,
+  leftUpperArm: 142,
+  leftForearm: -14,
+  rightUpperArm: -26,
+  rightForearm: 10,
+  leftThigh: 46,
+  leftShin: -42,
+  rightThigh: -52,
+  rightShin: 26,
+});
+
+/**
+ * Front support. The body is one arm length above the floor, so the axis runs from the shoulders
+ * down to the feet instead of lying flat, and the arms drop straight to the ground.
+ */
+const plank = j({
+  hipX: 102,
+  hipY: 196,
+  bodyTilt: -62,
+  torso: 2,
+  neck: 8,
+  leftUpperArm: 64,
+  leftForearm: -4,
+  rightUpperArm: 60,
+  rightForearm: 4,
+  leftThigh: 4,
+  leftShin: -2,
+  rightThigh: 0,
+  rightShin: 2,
+});
+
+const cobra = j({
+  hipX: 96,
+  hipY: 228,
+  bodyTilt: -76,
+  torso: 38,
+  neck: 14,
+  chest: 8,
+  leftUpperArm: 52,
+  leftForearm: -34,
+  rightUpperArm: 48,
+  rightForearm: 34,
+  leftThigh: -4,
+  leftShin: 2,
+  rightThigh: 0,
+  rightShin: -2,
+});
+
+const child = j({
+  hipX: 146,
+  hipY: 188,
+  bodyTilt: -110,
+  torso: 0,
+  neck: -8,
+  headShiftY: 4,
+  leftUpperArm: -146,
+  leftForearm: 12,
+  rightUpperArm: -150,
+  rightForearm: -12,
+  leftThigh: 112,
+  leftShin: -96,
+  rightThigh: 108,
+  rightShin: -92,
+});
+
+// Rounded back, head tucked toward the floor.
+const cat = j({ torso: -22, neck: -24, headShiftY: 6, chest: -6 }, quadruped);
+// Dipped back, chest and chin lifted.
+const cow = j({ torso: 14, neck: 20, headShiftY: -4, chest: 8 }, quadruped);
+
+const twist = j(
+  {
+    torso: -8,
+    leftUpperArm: -54,
+    leftForearm: -34,
+    rightUpperArm: -84,
+    rightForearm: 26,
+    ...tiltHead(-22),
+  },
+  sit,
+);
+
+const breathe = j(
+  {
+    torso: -3,
+    chest: 4,
+    leftUpperArm: 28,
+    leftForearm: -88,
+    rightUpperArm: -32,
+    rightForearm: 100,
+  },
+  sit,
+);
+
+const neckTilt = j({ ...tiltHead(18), headShiftY: 5, leftUpperArm: 10, rightUpperArm: -10 });
+
+const warrior = j({
+  hipX: 100,
+  hipY: 174,
+  torso: -4,
+  chest: 5,
+  leftUpperArm: 96,
+  leftForearm: -8,
+  rightUpperArm: -96,
+  rightForearm: 8,
+  leftThigh: 58,
+  leftShin: -30,
+  rightThigh: -50,
+  rightShin: 6,
+});
+
+const tree = j({
+  leftUpperArm: 156,
+  leftForearm: -22,
+  rightUpperArm: -156,
+  rightForearm: 22,
+  leftThigh: 6,
+  leftShin: -3,
+  rightThigh: -46,
+  rightShin: 66,
+});
+
+const hipOpen = j(
+  {
+    torso: -6,
+    leftUpperArm: 22,
+    leftForearm: -30,
+    rightUpperArm: -26,
+    rightForearm: 34,
+    leftThigh: 74,
+    leftShin: -112,
+    rightThigh: -96,
+    rightShin: 62,
+  },
+  sit,
+);
+
+const chestOpen = j({
+  torso: -10,
+  chest: 10,
+  shoulderLift: -3,
+  headShiftY: -3,
+  leftUpperArm: 108,
+  leftForearm: -12,
+  rightUpperArm: -108,
+  rightForearm: 12,
+});
+
+/** One hand rests on the sternum, the other stays soft at the side. */
+const heart = j({
+  leftUpperArm: 16,
+  leftForearm: -8,
+  rightUpperArm: -26,
+  rightForearm: 104,
+  rightHand: 12,
+  chest: 4,
+});
+
+const neckLeft = j({
+  ...tiltHead(26),
+  leftUpperArm: 8,
+  rightUpperArm: -12,
+  shoulderLift: -2,
+});
+
+const shrug = j({
+  shoulderLift: 16,
+  headShiftY: 5,
+  leftUpperArm: 14,
+  leftForearm: -5,
+  rightUpperArm: -14,
+  rightForearm: 5,
+});
+
+const shouldersDown = j({
+  shoulderLift: -7,
+  headShiftY: -3,
+  leftUpperArm: 10,
+  leftForearm: -4,
+  rightUpperArm: -10,
+  rightForearm: 4,
+});
+
+const jawSoft = j(
+  {
+    jaw: 14,
+    headShiftY: 3,
+    leftUpperArm: 26,
+    leftForearm: -26,
+    rightUpperArm: -26,
+    rightForearm: 26,
+  },
+  sit,
+);
+
+const gazeFar = j(
+  {
+    torso: -6,
+    headShiftY: -7,
+    leftUpperArm: 34,
+    leftForearm: -40,
+    rightUpperArm: -34,
+    rightForearm: 40,
+  },
+  sit,
+);
+
+/** On the back with the feet planted: knees point up, shins come back down to the floor. */
+const kneesUp = j({
+  hipX: 116,
+  hipY: 206,
+  bodyTilt: -90,
+  leftUpperArm: 12,
+  leftForearm: -8,
+  rightUpperArm: -12,
+  rightForearm: 8,
+  leftThigh: -48,
+  leftShin: 104,
+  rightThigh: -44,
+  rightShin: 100,
+});
+
+const pelvicTuck = j({ hipY: 210, torso: 12, neck: 4, headShiftY: 2 }, kneesUp);
+const pelvicArch = j({ hipY: 202, torso: -12, neck: -6, headShiftY: -2 }, kneesUp);
+
+/** A step with the screen-left leg: that knee lifts, the arms swing in opposition. */
+const walkLeft = j({
+  hipX: 96,
+  torso: 3,
+  leftUpperArm: 6,
+  leftForearm: -22,
+  rightUpperArm: -30,
+  rightForearm: 16,
+  leftThigh: 44,
+  leftShin: -68,
+  rightThigh: -10,
+  rightShin: 6,
+});
+
+const wristsFlex = j({
+  leftUpperArm: 40,
+  leftForearm: -86,
+  leftHand: -68,
+  rightUpperArm: -40,
+  rightForearm: 86,
+  rightHand: 68,
+});
+
+const wristsExtend = j({
+  leftUpperArm: 40,
+  leftForearm: -86,
+  leftHand: 64,
+  rightUpperArm: -40,
+  rightForearm: 86,
+  rightHand: -64,
+});
+
+const shakeOut = j({
+  leftUpperArm: 62,
+  leftForearm: -52,
+  leftHand: 34,
+  rightUpperArm: -28,
+  rightForearm: 64,
+  rightHand: -30,
+  shoulderLift: 4,
+});
+
+const breatheIn = j(
+  {
+    torso: -8,
+    chest: 10,
+    leftUpperArm: 34,
+    leftForearm: -92,
+    rightUpperArm: -34,
+    rightForearm: 92,
+  },
+  sit,
+);
+
+const breatheOut = j(
+  {
+    torso: 4,
+    chest: -4,
+    leftUpperArm: 24,
+    leftForearm: -100,
+    rightUpperArm: -24,
+    rightForearm: 100,
+  },
+  sit,
+);
+
+const neckForward = j({
+  torso: 6,
+  headShiftY: 15,
+  leftUpperArm: 8,
+  leftForearm: -4,
+  rightUpperArm: -8,
+  rightForearm: 4,
+});
+
+const neckBack = j({
+  torso: -6,
+  headShiftY: -13,
+  leftUpperArm: 8,
+  leftForearm: -4,
+  rightUpperArm: -8,
+  rightForearm: 4,
+});
+
+/** Jaw slides toward screen-left; the head slides with it, the tilt stays small. */
+const jawLeft = j(
+  {
+    jaw: 10,
+    ...tiltHead(8),
+    headShiftX: -13,
+    headShiftY: 3,
+    leftUpperArm: 26,
+    leftForearm: -26,
+    rightUpperArm: -26,
+    rightForearm: 26,
+  },
+  sit,
+);
+
+const calfWall = j({
+  hipX: 96,
+  hipY: 150,
+  torso: 10,
+  chest: 2,
+  leftUpperArm: 104,
+  leftForearm: -20,
+  leftHand: -8,
+  rightUpperArm: -104,
+  rightForearm: 20,
+  rightHand: 8,
+  leftThigh: 6,
+  leftShin: -3,
+  rightThigh: -34,
+  rightShin: 30,
+});
+
+const shoulderForward = j({
+  torso: 8,
+  neck: 0,
+  headShiftY: 4,
+  chest: -7,
+  shoulderLift: 5,
+  leftUpperArm: 26,
+  leftForearm: -52,
+  rightUpperArm: -26,
+  rightForearm: 52,
+});
+
+const standInhale = j({
+  torso: -8,
+  chest: 10,
+  shoulderLift: 3,
+  headShiftY: -3,
+  leftUpperArm: 26,
+  leftForearm: -12,
+  rightUpperArm: -26,
+  rightForearm: 12,
+});
+
+const standExhale = j({
+  torso: 3,
+  chest: -3,
+  shoulderLift: -4,
+  headShiftY: 2,
+  leftUpperArm: 12,
+  leftForearm: -6,
+  rightUpperArm: -12,
+  rightForearm: 6,
+});
+
+const lieInhale = j({ torso: -6, chest: 9, leftUpperArm: 20, leftForearm: -14, rightUpperArm: -20, rightForearm: 14 }, lie);
+const lieHold = j({ torso: -2, chest: 5, leftUpperArm: 14, leftForearm: -10, rightUpperArm: -14, rightForearm: 10 }, lie);
+const lieExhale = j({ torso: 4, chest: -4, leftUpperArm: 8, leftForearm: -6, rightUpperArm: -8, rightForearm: 6 }, lie);
+
 export const POSES: Record<PoseId, JointAngles> = {
   stand,
   sit,
   lie,
-  reachUp: j({
-    leftUpperArm: 168,
-    leftForearm: 8,
-    rightUpperArm: -168,
-    rightForearm: -8,
-    neck: -6,
-    headShiftY: -4,
-    chest: 4,
-  }),
-  fold: j({
-    hipY: 158,
-    torso: 92,
-    neck: 12,
-    headShiftY: 8,
-    leftUpperArm: 160,
-    leftForearm: 20,
-    rightUpperArm: -160,
-    rightForearm: -20,
-    leftThigh: 8,
-    rightThigh: -8,
-  }),
-  squat: j({
-    hipY: 176,
-    torso: 18,
-    leftUpperArm: 70,
-    leftForearm: 40,
-    rightUpperArm: -70,
-    rightForearm: -40,
-    leftThigh: 78,
-    leftShin: -78,
-    rightThigh: -78,
-    rightShin: 78,
-  }),
-  lunge: j({
-    hipX: 108,
-    hipY: 156,
-    torso: 8,
-    leftUpperArm: 150,
-    rightUpperArm: -20,
-    leftThigh: 55,
-    leftShin: -20,
-    rightThigh: -70,
-    rightShin: 8,
-  }),
-  plank: j({
-    hipX: 108,
-    hipY: 168,
-    bodyTilt: 82,
-    torso: 4,
-    neck: -8,
-    leftUpperArm: 95,
-    leftForearm: 8,
-    rightUpperArm: 95,
-    rightForearm: 8,
-    leftThigh: 8,
-    leftShin: 4,
-    rightThigh: -8,
-    rightShin: -4,
-  }),
-  cobra: j({
-    hipX: 112,
-    hipY: 198,
-    bodyTilt: 18,
-    torso: -38,
-    neck: -18,
-    headShiftY: -6,
-    chest: 8,
-    leftUpperArm: 110,
-    leftForearm: 55,
-    rightUpperArm: -110,
-    rightForearm: -55,
-    leftThigh: 86,
-    leftShin: 4,
-    rightThigh: -86,
-    rightShin: -4,
-  }),
-  child: j({
-    hipX: 108,
-    hipY: 196,
-    bodyTilt: 8,
-    torso: 72,
-    neck: 16,
-    headShiftY: 6,
-    leftUpperArm: 168,
-    leftForearm: 12,
-    rightUpperArm: -168,
-    rightForearm: -12,
-    leftThigh: 70,
-    leftShin: 70,
-    rightThigh: -70,
-    rightShin: -70,
-  }),
-  cat: j({
-    hipX: 100,
-    hipY: 168,
-    bodyTilt: 8,
-    torso: 28,
-    neck: 22,
-    headShiftY: 10,
-    chest: -6,
-    leftUpperArm: 92,
-    leftForearm: 8,
-    rightUpperArm: -92,
-    rightForearm: -8,
-    leftThigh: 88,
-    leftShin: 8,
-    rightThigh: -88,
-    rightShin: -8,
-  }),
-  cow: j({
-    hipX: 100,
-    hipY: 172,
-    bodyTilt: 6,
-    torso: -18,
-    neck: -22,
-    headShiftY: -8,
-    chest: 8,
-    leftUpperArm: 88,
-    leftForearm: 10,
-    rightUpperArm: -88,
-    rightForearm: -10,
-    leftThigh: 86,
-    leftShin: 6,
-    rightThigh: -86,
-    rightShin: -6,
-  }),
-  twist: j(
-    {
-      torso: 10,
-      neck: 32,
-      headShiftX: 10,
-      leftUpperArm: 70,
-      leftForearm: 55,
-      rightUpperArm: -130,
-      rightForearm: -20,
-    },
-    sit,
-  ),
-  breathe: j(
-    {
-      torso: -4,
-      neck: -2,
-      chest: 3,
-      leftUpperArm: 42,
-      leftForearm: 48,
-      rightUpperArm: -42,
-      rightForearm: -48,
-    },
-    sit,
-  ),
-  neckTilt: j({
-    neck: 32,
-    headShiftX: 8,
-    leftUpperArm: 8,
-    rightUpperArm: -8,
-  }),
-  warrior: j({
-    hipX: 100,
-    hipY: 150,
-    torso: -4,
-    chest: 5,
-    leftUpperArm: 172,
-    leftForearm: 6,
-    rightUpperArm: -172,
-    rightForearm: -6,
-    leftThigh: 42,
-    leftShin: -8,
-    rightThigh: -78,
-    rightShin: 10,
-  }),
-  tree: j({
-    leftUpperArm: 150,
-    leftForearm: 40,
-    rightUpperArm: -150,
-    rightForearm: -40,
-    leftThigh: 8,
-    leftShin: 4,
-    rightThigh: -48,
-    rightShin: 70,
-  }),
-  hipOpen: j(
-    {
-      hipX: 108,
-      torso: -8,
-      neck: -4,
-      leftUpperArm: 16,
-      leftForearm: 10,
-      rightUpperArm: -16,
-      rightForearm: -10,
-      leftThigh: 70,
-      leftShin: 55,
-      rightThigh: -95,
-      rightShin: 20,
-    },
-    sit,
-  ),
-  chestOpen: j({
-    torso: -12,
-    neck: -8,
-    headShiftY: -4,
-    chest: 10,
-    shoulderLift: -4,
-    leftUpperArm: -62,
-    leftForearm: -28,
-    rightUpperArm: 62,
-    rightForearm: 28,
-  }),
-  heart: j({
-    leftUpperArm: 42,
-    leftForearm: 58,
-    leftHand: 18,
-    rightUpperArm: -18,
-    rightForearm: -8,
-    neck: -4,
-    chest: 3,
-  }),
-  neckLeft: j({
-    neck: 38,
-    headShiftX: 12,
-    leftUpperArm: 6,
-    rightUpperArm: -10,
-    shoulderLift: -2,
-  }),
-  neckRight: j({
-    neck: -38,
-    headShiftX: -12,
-    leftUpperArm: 10,
-    rightUpperArm: -6,
-    shoulderLift: -2,
-  }),
-  shrug: j({
-    neck: 8,
-    headShiftY: 6,
-    shoulderLift: 16,
-    leftUpperArm: 12,
-    leftForearm: 6,
-    rightUpperArm: -12,
-    rightForearm: -6,
-  }),
-  shouldersDown: j({
-    neck: -6,
-    headShiftY: -2,
-    shoulderLift: -6,
-    leftUpperArm: 8,
-    leftForearm: 4,
-    rightUpperArm: -8,
-    rightForearm: -4,
-  }),
-  jawSoft: j(
-    {
-      neck: -8,
-      jaw: 14,
-      headShiftY: 4,
-      leftUpperArm: 12,
-      leftForearm: 8,
-      rightUpperArm: -12,
-      rightForearm: -8,
-    },
-    sit,
-  ),
-  gazeFar: j(
-    {
-      torso: -6,
-      neck: -14,
-      headShiftY: -8,
-      leftUpperArm: 16,
-      leftForearm: 22,
-      rightUpperArm: -16,
-      rightForearm: -22,
-    },
-    sit,
-  ),
-  kneesUp: j({
-    hipX: 108,
-    hipY: 198,
-    bodyTilt: 90,
-    neck: -4,
-    leftUpperArm: 12,
-    leftForearm: 8,
-    rightUpperArm: -12,
-    rightForearm: -8,
-    leftThigh: -55,
-    leftShin: 70,
-    rightThigh: 55,
-    rightShin: -70,
-  }),
-  pelvicTuck: j({
-    hipX: 108,
-    hipY: 200,
-    bodyTilt: 96,
-    torso: 10,
-    neck: 2,
-    leftUpperArm: 12,
-    leftForearm: 8,
-    rightUpperArm: -12,
-    rightForearm: -8,
-    leftThigh: -48,
-    leftShin: 62,
-    rightThigh: 48,
-    rightShin: -62,
-  }),
-  pelvicArch: j({
-    hipX: 108,
-    hipY: 196,
-    bodyTilt: 84,
-    torso: -10,
-    neck: -8,
-    leftUpperArm: 12,
-    leftForearm: 8,
-    rightUpperArm: -12,
-    rightForearm: -8,
-    leftThigh: -62,
-    leftShin: 78,
-    rightThigh: 62,
-    rightShin: -78,
-  }),
-  walkLeft: j({
-    hipX: 110,
-    bodyTilt: 5,
-    leftUpperArm: -42,
-    leftForearm: -18,
-    rightUpperArm: 52,
-    rightForearm: 22,
-    leftThigh: 46,
-    leftShin: -16,
-    rightThigh: -56,
-    rightShin: 32,
-  }),
-  walkRight: j({
-    hipX: 90,
-    bodyTilt: -5,
-    leftUpperArm: 52,
-    leftForearm: 22,
-    rightUpperArm: -42,
-    rightForearm: -18,
-    leftThigh: -56,
-    leftShin: 32,
-    rightThigh: 46,
-    rightShin: -16,
-  }),
-  wristsFlex: j({
-    leftUpperArm: 88,
-    leftForearm: 8,
-    leftHand: 70,
-    rightUpperArm: -88,
-    rightForearm: -8,
-    rightHand: -70,
-  }),
-  wristsExtend: j({
-    leftUpperArm: 88,
-    leftForearm: 22,
-    leftHand: -62,
-    rightUpperArm: -88,
-    rightForearm: -22,
-    rightHand: 62,
-  }),
-  shakeOut: j({
-    leftUpperArm: 78,
-    leftForearm: 48,
-    leftHand: 42,
-    rightUpperArm: -34,
-    rightForearm: -58,
-    rightHand: -38,
-    shoulderLift: 4,
-  }),
-  twistOther: j(
-    {
-      torso: -10,
-      neck: -32,
-      headShiftX: -10,
-      leftUpperArm: 130,
-      leftForearm: 20,
-      rightUpperArm: -70,
-      rightForearm: -55,
-    },
-    sit,
-  ),
-  treeOther: j({
-    leftUpperArm: 150,
-    leftForearm: 40,
-    rightUpperArm: -150,
-    rightForearm: -40,
-    leftThigh: 48,
-    leftShin: -70,
-    rightThigh: -8,
-    rightShin: -4,
-  }),
-  lungeOther: j({
-    hipX: 92,
-    hipY: 156,
-    torso: 8,
-    leftUpperArm: 20,
-    rightUpperArm: -150,
-    leftThigh: 70,
-    leftShin: -8,
-    rightThigh: -55,
-    rightShin: 20,
-  }),
-  breatheIn: j(
-    {
-      torso: -10,
-      neck: -6,
-      chest: 10,
-      leftUpperArm: 52,
-      leftForearm: 40,
-      rightUpperArm: -52,
-      rightForearm: -40,
-    },
-    sit,
-  ),
-  breatheOut: j(
-    {
-      torso: 4,
-      neck: 2,
-      chest: -4,
-      leftUpperArm: 22,
-      leftForearm: 28,
-      rightUpperArm: -22,
-      rightForearm: -28,
-    },
-    sit,
-  ),
-  neckForward: j({
-    neck: 4,
-    torso: 8,
-    headShiftY: 16,
-    leftUpperArm: 8,
-    rightUpperArm: -8,
-  }),
-  neckBack: j({
-    neck: -8,
-    torso: -6,
-    headShiftY: -12,
-    leftUpperArm: 8,
-    rightUpperArm: -8,
-  }),
-  jawLeft: j(
-    {
-      neck: 12,
-      jaw: 12,
-      headShiftX: 14,
-      headShiftY: 3,
-      leftUpperArm: 12,
-      leftForearm: 8,
-      rightUpperArm: -12,
-      rightForearm: -8,
-    },
-    sit,
-  ),
-  jawRight: j(
-    {
-      neck: -12,
-      jaw: 12,
-      headShiftX: -14,
-      headShiftY: 3,
-      leftUpperArm: 12,
-      leftForearm: 8,
-      rightUpperArm: -12,
-      rightForearm: -8,
-    },
-    sit,
-  ),
-  warriorOther: j({
-    hipX: 100,
-    hipY: 150,
-    torso: -4,
-    chest: 5,
-    leftUpperArm: 172,
-    leftForearm: 6,
-    rightUpperArm: -172,
-    rightForearm: -6,
-    leftThigh: 78,
-    leftShin: -10,
-    rightThigh: -42,
-    rightShin: 8,
-  }),
-  hipOpenOther: j(
-    {
-      hipX: 100,
-      torso: -8,
-      neck: -4,
-      leftUpperArm: 16,
-      leftForearm: 10,
-      rightUpperArm: -16,
-      rightForearm: -10,
-      leftThigh: 95,
-      leftShin: -20,
-      rightThigh: -70,
-      rightShin: -55,
-    },
-    sit,
-  ),
-  calfWall: j({
-    hipX: 106,
-    hipY: 152,
-    torso: 14,
-    chest: 2,
-    leftUpperArm: 108,
-    leftForearm: 28,
-    leftHand: -8,
-    rightUpperArm: -108,
-    rightForearm: -28,
-    rightHand: 8,
-    leftThigh: 8,
-    leftShin: 2,
-    rightThigh: -58,
-    rightShin: 18,
-  }),
-  calfWallOther: j({
-    hipX: 94,
-    hipY: 152,
-    torso: 14,
-    chest: 2,
-    leftUpperArm: 108,
-    leftForearm: 28,
-    leftHand: -8,
-    rightUpperArm: -108,
-    rightForearm: -28,
-    rightHand: 8,
-    leftThigh: 58,
-    leftShin: -18,
-    rightThigh: -8,
-    rightShin: -2,
-  }),
-  shoulderForward: j({
-    torso: 14,
-    neck: 8,
-    headShiftY: 4,
-    chest: -6,
-    shoulderLift: 6,
-    leftUpperArm: 48,
-    leftForearm: 22,
-    rightUpperArm: -48,
-    rightForearm: -22,
-  }),
-  standInhale: j({
-    torso: -10,
-    neck: -6,
-    chest: 10,
-    shoulderLift: 2,
-    leftUpperArm: 28,
-    leftForearm: 12,
-    rightUpperArm: -28,
-    rightForearm: -12,
-  }),
-  standExhale: j({
-    torso: 4,
-    neck: 2,
-    chest: -3,
-    shoulderLift: -4,
-    leftUpperArm: 10,
-    leftForearm: 6,
-    rightUpperArm: -10,
-    rightForearm: -6,
-  }),
-  lieInhale: j(
-    {
-      torso: -8,
-      neck: -8,
-      chest: 8,
-      leftUpperArm: 22,
-      leftForearm: 10,
-      rightUpperArm: -22,
-      rightForearm: -10,
-    },
-    lie,
-  ),
-  lieHold: j(
-    {
-      torso: -4,
-      neck: -4,
-      chest: 5,
-      leftUpperArm: 14,
-      leftForearm: 10,
-      rightUpperArm: -14,
-      rightForearm: -10,
-    },
-    lie,
-  ),
-  lieExhale: j(
-    {
-      torso: 4,
-      neck: -2,
-      chest: -3,
-      leftUpperArm: 6,
-      leftForearm: 8,
-      rightUpperArm: -6,
-      rightForearm: -8,
-    },
-    lie,
-  ),
+  reachUp,
+  fold,
+  squat,
+  lunge,
+  plank,
+  cobra,
+  child,
+  cat,
+  cow,
+  twist,
+  breathe,
+  neckTilt,
+  warrior,
+  tree,
+  hipOpen,
+  chestOpen,
+  heart,
+  neckLeft,
+  neckRight: mirrorPose(neckLeft),
+  shrug,
+  shouldersDown,
+  jawSoft,
+  gazeFar,
+  kneesUp,
+  pelvicTuck,
+  pelvicArch,
+  walkLeft,
+  walkRight: mirrorPose(walkLeft),
+  wristsFlex,
+  wristsExtend,
+  shakeOut,
+  twistOther: mirrorPose(twist),
+  treeOther: mirrorPose(tree),
+  lungeOther: mirrorPose(lunge),
+  breatheIn,
+  breatheOut,
+  neckForward,
+  neckBack,
+  jawLeft,
+  jawRight: mirrorPose(jawLeft),
+  warriorOther: mirrorPose(warrior),
+  hipOpenOther: mirrorPose(hipOpen),
+  calfWall,
+  calfWallOther: mirrorPose(calfWall),
+  shoulderForward,
+  standInhale,
+  standExhale,
+  lieInhale,
+  lieHold,
+  lieExhale,
 };
 
 export const POSE_IDS = Object.keys(POSES) as PoseId[];

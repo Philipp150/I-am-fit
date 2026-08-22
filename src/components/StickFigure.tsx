@@ -1,18 +1,21 @@
 "use client";
 
+import { FIGURE, viewBoxAttr } from "@/lib/pose-geometry";
 import { POSES, type JointAngles } from "@/lib/poses";
 import type { PoseId } from "@/lib/types";
 
-const HIP_W = 11;
-const SHOULDER_W = 22;
-const TORSO = 68;
-const THIGH = 50;
-const SHIN = 46;
-const FOOT = 16;
-const UPPER = 36;
-const FORE = 32;
-const HAND = 13;
-const NECK = 16;
+// One source of truth for the skeleton, shared with `pose-geometry.ts` so the tests measure the
+// same figure that gets drawn.
+const HIP_W = FIGURE.hipW;
+const SHOULDER_W = FIGURE.shoulderW;
+const TORSO = FIGURE.torso;
+const THIGH = FIGURE.thigh;
+const SHIN = FIGURE.shin;
+const FOOT = FIGURE.foot;
+const UPPER = FIGURE.upper;
+const FORE = FIGURE.fore;
+const HAND = FIGURE.hand;
+const NECK = FIGURE.neck;
 
 type Props = {
   pose: PoseId | JointAngles;
@@ -31,8 +34,8 @@ export function StickFigure({ pose, className, accent = "#D97657" }: Props) {
   const shoulderY = -TORSO - shoulderLift;
 
   return (
-    <svg viewBox="0 0 200 280" className={className} aria-hidden="true">
-      <ellipse cx="100" cy="248" rx="52" ry="7" fill="#E7D7C1" opacity="0.85" />
+    <svg viewBox={viewBoxAttr()} className={className} aria-hidden="true">
+      <ellipse cx="100" cy="250" rx="58" ry="7" fill="#E7D7C1" opacity="0.85" />
       <g transform={`translate(${angles.hipX} ${angles.hipY}) rotate(${angles.bodyTilt})`}>
         <Leg side={-1} thigh={angles.leftThigh} shin={angles.leftShin} accent={accent} />
         <Leg side={1} thigh={angles.rightThigh} shin={angles.rightShin} accent={accent} />
@@ -99,8 +102,8 @@ export function StickFigure({ pose, className, accent = "#D97657" }: Props) {
               strokeLinecap="round"
             />
             <Joint r={4.5} accent={accent} />
-            <g transform={`translate(${headShiftX} ${-NECK - 18 + headShiftY})`}>
-              <ellipse rx="15" ry="18.5" fill="#FFFBF4" stroke="#1F3F37" strokeWidth="3.2" />
+            <g transform={`translate(${headShiftX} ${-NECK - FIGURE.headGap + headShiftY})`}>
+              <ellipse rx={FIGURE.headRx} ry={FIGURE.headRy} fill="#FFFBF4" stroke="#1F3F37" strokeWidth="3.2" />
               <ellipse cx="-5.5" cy="-2" rx="1.7" ry="2.2" fill="#1F3F37" />
               <ellipse cx="5.5" cy="-2" rx="1.7" ry="2.2" fill="#1F3F37" />
               {jaw > 0 ? (
