@@ -5,6 +5,7 @@ import {
   landmarksHavePerson,
   mapLandmarksToFrame,
   normalizeHipTravel,
+  normalizeNeckBias,
   SMALL_TORSO_LEN,
   median,
   type MappedFrame,
@@ -132,6 +133,7 @@ export function trackFromDetections(input: DetectionsInput): TrackFromDetections
   }
 
   applyClipOrientation(kept, dominant);
+  normalizeNeckBias(kept);
   normalizeHipTravel(kept);
 
   // Hold the last good frame across short gaps so a briefly hidden person does not snap the figure

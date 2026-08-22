@@ -11,7 +11,9 @@ import {
   landmarksToJointAngles,
   mapLandmarksToFrame,
   normalizeDeg,
+  median,
   normalizeHipTravel,
+  normalizeNeckBias,
   standingLandmarks,
   svgAngleDown,
   svgAngleUp,
@@ -198,6 +200,29 @@ describe("clip orientation", () => {
     const { kept, dominant } = dropOrientationOutliers(frames);
     expect(kept).toHaveLength(4);
     expect(dominant).toBeGreaterThan(80);
+  });
+
+  it("takes the camera's constant head tilt out but keeps the head moving", () => {
+    const frames = [30, 34, 32, 46, 18].map((neck) => {
+      const entry = spineFrame(0);
+      entry.pose = { ...entry.pose, neck };
+      return entry;
+    });
+    normalizeNeckBias(frames);
+    const necks = frames.map((frame) => frame.pose.neck);
+    expect(median(necks)).toBeCloseTo(0, 5);
+    // The 14 degrees the head actually moved between those two frames survive.
+    expect(necks[3] - necks[4]).toBeCloseTo(28, 1);
+  });
+
+  it("leaves a clip alone when the head already sits in line with the torso", () => {
+    const frames = [1, -1, 0].map((neck) => {
+      const entry = spineFrame(0);
+      entry.pose = { ...entry.pose, neck };
+      return entry;
+    });
+    normalizeNeckBias(frames);
+    expect(frames.map((frame) => frame.pose.neck)).toEqual([1, -1, 0]);
   });
 
   it("decides the tilt once per clip so an upright figure never flips mid clip", () => {

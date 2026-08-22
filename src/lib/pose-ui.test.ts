@@ -48,7 +48,9 @@ describe("pose track UI copy and player wiring", () => {
 
   it("hides the upload hint once a track exists and shows a before/after", () => {
     const capture = read("../components/PoseTrackCapture.tsx");
-    expect(capture).toContain("hasTrack || busy ? \"\" : pixelNotice(availability)");
+    // Never tell someone who just picked a file that there is no file: while reading, after a
+    // track exists, and next to a failure the hint is wrong.
+    expect(capture).toContain("hasTrack || busy || error ? \"\" : pixelNotice(availability)");
     expect(capture).toContain("PoseTrackCompare");
     const compare = read("../components/PoseTrackCompare.tsx");
     expect(compare).toContain("poseForSteps");

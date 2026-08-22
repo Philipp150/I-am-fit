@@ -406,6 +406,23 @@ export function applyClipOrientation(frames: MappedFrame[], dominant: number): v
   }
 }
 
+/**
+ * Take the constant part of the head tilt out of a clip. Seen from the side an ear sits well in
+ * front of the shoulder line, so a level head still measures as a large forward tilt, and every
+ * side-view clip came out with the figure permanently peering downwards. The camera angle is fixed
+ * for a clip, so the sustained offset is the artefact and the variation around it is the real head
+ * movement. A head that genuinely stays lowered for a whole clip is levelled out too; that costs
+ * less than tilting every figure.
+ */
+export function normalizeNeckBias(frames: MappedFrame[]): void {
+  if (frames.length === 0) return;
+  const bias = median(frames.map((frame) => frame.pose.neck));
+  if (Math.abs(bias) < 1) return;
+  for (const frame of frames) {
+    frame.pose.neck = round1(clamp(normalizeDeg(frame.pose.neck - bias), -45, 45));
+  }
+}
+
 export function landmarksToJointAngles(landmarks: PoseLandmark[], options: MapOptions = {}): JointAngles {
   return mapLandmarksToFrame(landmarks, options)?.pose ?? options.previous ?? POSES.stand;
 }

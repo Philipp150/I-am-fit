@@ -73,8 +73,9 @@ export function PoseTrackCapture({
   const cancelRef = useRef<{ aborted: boolean }>({ aborted: false });
   const availability = pixelAvailabilityForUrl(sourceUrl);
   const hasTrack = hasPlayableTrack(value);
-  // Once a clip has been read the "no pixels" hint is stale and only confuses.
-  const notice = hasTrack || busy ? "" : pixelNotice(availability);
+  // Once a clip has been read the "no pixels" hint is stale, and telling someone who just uploaded
+  // a file that there is no file reads as if the upload never arrived. The error says what to do.
+  const notice = hasTrack || busy || error ? "" : pixelNotice(availability);
 
   useEffect(() => {
     const cancel = cancelRef.current;
