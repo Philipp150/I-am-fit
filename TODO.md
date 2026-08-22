@@ -182,3 +182,15 @@ Format: `- [ ]` offen, `- [x]` erledigt.
 - [x] Hinweis „ohne Videodatei“ nicht mehr neben einem Fehler zeigen, nachdem eine Datei gewählt wurde
 - [x] Ende zu Ende im Headless-Browser gemessen (lokaler Production-Build und Live): Kniebeuge-Clip 7,1 s → Spur 6,6 KB / 72 Bilder / 10 fps in 7,3 s; 92-s-Clip → 26 KB / 298 Bilder / 3,3 fps in 25 s (vorher 83 s); Spur überlebt Reload; Figur zeigt 8 von 8 verschiedene Haltungen
 - [x] Tests für Abbildung, leere und unsichere Erkennungen, Glättung, Spur gegen Fallback; Lint und Production-Build grün
+
+## Authored Posen und Pose-Picker (Philipp: „Positionen absoluter Unfug“)
+
+- [x] Fehlerbild bestätigt per Screenshot (Handy-Viewport, live und lokal): `/catalog/import` und `/catalog/[id]/edit` zeigten unter „Figur und Schritte“ ein Raster aus 30+ nicht beschrifteten, fingernagelgroßen Strichfigur-Kacheln – nicht zu unterscheiden, nicht zu treffen
+- [x] Ursache bestätigt: die authored PoseIds (`poses.ts`) nutzten die entgegengesetzte Winkelkonvention zur SVG-Zeichnung (`rotate()` ist im Uhrzeigersinn, y zeigt nach unten) – „Nacken links“ kippte nach rechts, gebeugte Ellbogen schlugen nach außen statt zum Körper, „Schritt rechts“ hatte verschränkte Beine, 13 Posen zeichneten außerhalb der viewBox (abgeschnittene Köpfe bei allen liegenden Posen)
+- [x] Eine Konvention für Video-Spur (`pose-map.ts`) und authored Posen (`poses.ts`) durchgesetzt und in beiden Dateien dokumentiert; Geometrie/Maße in `pose-geometry.ts` ausgelagert, `StickFigure.tsx` zeichnet daraus, Tests messen dieselbe Geometrie statt nur die eingegebenen Zahlen
+- [x] Seitenzwillinge (`neckLeft`/`neckRight`, `walkLeft`/`walkRight`, `tree`/`treeOther`, …) werden mit `mirrorPose` gebaut, keine zweite Handeingabe mehr möglich
+- [x] Named-Pose-Tests: `neckLeft`/`neckTilt` kippen den Kopf sichtbar nach links, `shrug` hebt die Schultern (ohne die Arme zu heben), `walkLeft`/`walkRight` heben abwechselnd das jeweilige Bein, liegende Posen haben Kopf und Hüfte auf gleicher Höhe seitlich versetzt, kein Kopf mehr außerhalb der viewBox
+- [x] Pose-Picker (`PosePicker.tsx` + `pose-picker.ts`) ersetzt das unbeschriftete 5-Spalten-Raster in `ExerciseEditor.tsx`: beschriftete, größere Kacheln, Vorschläge passend zum Schritttext, Volltextsuche (Umlaut-tolerant), Körperteil-Gruppen (Kopf/Nacken/Kiefer, Schultern/Arme, Rumpf/Drehung, Hüfte/Beine, Stand/Gehen, Atem, Sitzen/Liegen) statt aller 53 Posen auf einmal
+- [x] Bewegungsspur vs. Pose klargestellt: liegt eine Spur an der Übung, zeigt ein Hinweis „Die Figur folgt der Bewegungsspur“ mit „Spur verwenden“/„Pose wählen“; erst ein zweiter, expliziter Tap („Spur entfernen und Posen nutzen“) entfernt die Spur – kein stilles Überschreiben mehr
+- [x] Visueller Vorher/Nachher-Beweis: Pose-Galerie aller 53 Posen vor und nach dem Fix (`scripts/pose-gallery.mjs`) plus Playwright-Screenshots von Live-Seite (vorher) und lokalem Editor (nachher) auf Handy-Viewport
+- [x] Tests (`pose-geometry.ts`, `poses.test.ts`, `pose-picker.test.ts`), Lint und Production-Build grün
