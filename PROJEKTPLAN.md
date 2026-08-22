@@ -163,3 +163,19 @@ Beim Datei-Upload läuft OCR (Tesseract.js, WASM) im selben Durchgang wie die Be
 Die Oberfläche sagt **Thema**, **Ziel** oder **Körperregion**, nicht Beschwerde. Menschen wollen oft Bauch oder Büro, keine Diagnose. Chips unter „Worum soll’s gehen?“: Nacken, Rücken, Bauch, Beweglichkeit, Büro. Die Tabelle heißt weiter `complaints`, die IDs (`comp-neck`, …) bleiben.
 
 Erstbesuch und leerer Plan: ein Thema, eine Minute (`durationSec` 60), Landung auf **Heute**. Dexie zuerst; bestehende und empfangene Pläne bleiben. Optional Erinnerung danach. Nav-Punkt **Themen**, Sammlung filtert nach Thema, Editor „Thema, Ziel, Körperregion“.
+
+## 16. Nachtrag: Bewegungsspur, die wirklich trägt
+
+Nachtrag 13 beschreibt den Weg (Clip → Gelenkwinkel → Gliederpuppe). Der Weg stand, das Ergebnis nicht: die Figur klappte mitten im Clip auf den Rücken, Arme froren in Streuwinkeln ein, ein 90-Sekunden-Clip lief 83 Sekunden lang, und bei einer Person weit weg im Bild kam wortlos Unsinn heraus.
+
+**Abbildung.** SVG `rotate()` dreht im Uhrzeigersinn, weil y nach unten zeigt. Winkel werden jetzt in dieser Konvention gemessen (`svgAngleDown` / `svgAngleUp`), Kindknochen relativ zum Elternknochen. Normalisierte Landmarks sind pro Achse gestaucht, deshalb rechnet die Abbildung mit dem Seitenverhältnis. Die Figur spiegelt den Clip: Mannequin-links ist die Bildschirmseite, nicht die Körperseite.
+
+**Pro Clip statt pro Bild.** Wie die Person im Raum liegt, ist eine Eigenschaft des Clips, nicht des Einzelbildes. Bilder, deren Wirbelsäule dem Rest des Clips widerspricht, sind Erkennungsfehler und fliegen raus; der Rest teilt eine Wurzeldrehung. Ebenso die Kopfneigung: von der Seite steht ein Ohr weit vor der Schulterlinie, ein gerader Kopf misst sich als 34-Grad-Neigung. Der Median des Clips wird abgezogen, die Bewegung darum herum bleibt.
+
+**Lücken.** Ein Gelenk, das aus dem Bild verschwindet, driftet zur neutralen Pose zurück statt einzufrieren. Kurze Lücken überbrückt das letzte gute Bild. Hüftweg wird in Rumpflängen gemessen, damit ein Clip aus zehn Metern Entfernung dieselbe Kniebeuge zeigt wie einer aus zwei.
+
+**Budget.** Höchstens 300 Pose-Abtastungen und 14 OCR-Lesungen pro Clip; die Bildrate ergibt sich aus der Dauer (kurze Clips 10/s, ein 90-Sekunden-Clip 3,3/s). Das MediaPipe-WASM liegt unter `/mediapipe/wasm` auf der eigenen Domain (Build-Schritt `scripts/copy-mediapipe-wasm.mjs`), CDN nur als Reserve; Modell- und OCR-Start haben Timeouts, damit nichts unbegrenzt hängt.
+
+**Rückmeldung.** Phasen mit Prozent und Bildzähler, Abbrechen, „Noch einmal versuchen“, und nach der Analyse ein Vorher/Nachher (`PoseTrackCompare`): links die Pose aus den Schritten, rechts die Spur. Erkennungsrate und „Person recht klein im Bild“ werden benannt statt versteckt.
+
+**Was ungenau bleibt.** Eine Kamera sieht keine Tiefe. Vorne und hinten sind nicht unterscheidbar (die Hantelstange hinter dem Nacken zeichnet die Figur mit Armen vor der Brust), Schulterheben, Kopfversatz und Brustdrehung bleiben für Spuren neutral statt geraten. Seitenansichten mit verdeckten Gliedmaßen bleiben grob. Sehr körnige oder sehr kleine Personen ergeben eine niedrige Erkennungsrate – die wird angezeigt, nicht kaschiert. YouTube- und Instagram-Einbettungen liefern weiterhin keine Pixel; dort bleiben die authored PoseIds.
