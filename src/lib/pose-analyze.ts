@@ -1,17 +1,31 @@
-import { lerpPose, type JointAngles } from "./poses";
-import { landmarksHavePerson, landmarksToJointAngles, type PoseLandmark } from "./pose-map";
+import type { JointAngles } from "./poses";
+import {
+  landmarksHavePerson,
+  mapLandmarksToFrame,
+  normalizeHipTravel,
+  type MappedFrame,
+  type PoseLandmark,
+} from "./pose-map";
 import { POSE_COPY } from "./pose-source";
 import {
   encodePoseTrack,
   POSE_TRACK_DEFAULT_FPS,
   POSE_TRACK_MAX_DURATION_SEC,
+  sampleFpsForDuration,
+  smoothPoseSeries,
   type PoseTrack,
   type PoseTrackSourceKind,
 } from "./pose-track";
 import { grabVideoFrame, ocrSampleToCue, shouldReadTextAtSample, type FrameTextReader } from "./video-ocr";
 import type { VideoTextCue } from "./video-text";
 
-export type PoseAnalyzeCode = "no-person" | "no-pixels" | "load-failed" | "too-short" | "tainted";
+export type PoseAnalyzeCode =
+  | "no-person"
+  | "no-pixels"
+  | "load-failed"
+  | "too-short"
+  | "tainted"
+  | "cancelled";
 
 export class PoseAnalyzeError extends Error {
   readonly code: PoseAnalyzeCode;
@@ -27,10 +41,18 @@ export type PoseDetector = {
   detect(image: unknown, timeSec: number): PoseLandmark[] | null | Promise<PoseLandmark[] | null>;
 };
 
+export type AnalyzePhase = "model" | "pose" | "finish";
+
 export type AnalyzeProgress = {
   ratio: number;
   label: string;
+  phase: AnalyzePhase;
+  frame?: number;
+  frames?: number;
 };
+
+/** A person has to be visible in at least this share of the samples for the track to be useful. */
+export const MIN_DETECTION_RATE = 0.25;
 
 export function sampleTimes(durationSec: number, fps: number, maxDuration = POSE_TRACK_MAX_DURATION_SEC): number[] {
   const clipped = Math.min(Math.max(0, durationSec), maxDuration);
@@ -43,12 +65,23 @@ export function sampleTimes(durationSec: number, fps: number, maxDuration = POSE
   return times;
 }
 
+export function detectionRate(detections: Array<PoseLandmark[] | null>): number {
+  if (detections.length === 0) return 0;
+  let hits = 0;
+  for (const detection of detections) {
+    if (detection && landmarksHavePerson(detection)) hits += 1;
+  }
+  return hits / detections.length;
+}
+
 export function buildPoseTrackFromDetections(input: {
   durationSec: number;
   fps?: number;
   detections: Array<PoseLandmark[] | null>;
   sourceKind: PoseTrackSourceKind;
   analyzedAt?: string;
+  /** Video width / height, so angles are not skewed by portrait or widescreen framing. */
+  aspect?: number;
 }): PoseTrack {
   const fps = input.fps ?? POSE_TRACK_DEFAULT_FPS;
   const durationSec = Math.min(POSE_TRACK_MAX_DURATION_SEC, Math.max(0, input.durationSec));
@@ -56,40 +89,34 @@ export function buildPoseTrackFromDetections(input: {
     throw new PoseAnalyzeError("too-short", POSE_COPY.tooShort);
   }
 
-  const poses: Array<JointAngles | null> = [];
-  let last: JointAngles | undefined;
-  let hits = 0;
+  const mapped: Array<MappedFrame | null> = [];
+  let previous: JointAngles | undefined;
   for (const detection of input.detections) {
-    if (detection && landmarksHavePerson(detection)) {
-      last = landmarksToJointAngles(detection, last);
-      hits += 1;
-      poses.push(last);
-    } else if (last) {
-      poses.push(last);
-    } else {
-      poses.push(null);
-    }
+    const frame = detection ? mapLandmarksToFrame(detection, { previous, aspect: input.aspect }) : null;
+    if (frame) previous = frame.pose;
+    mapped.push(frame);
   }
 
-  const firstHit = poses.findIndex((pose) => pose !== null);
-  const found = firstHit >= 0 ? poses[firstHit] : null;
-  if (hits === 0 || !found) {
-    throw new PoseAnalyzeError("no-person", POSE_COPY.noPerson);
+  const rate = mapped.filter(Boolean).length / mapped.length;
+  if (rate < MIN_DETECTION_RATE) {
+    throw new PoseAnalyzeError("no-person", rate === 0 ? POSE_COPY.noPerson : POSE_COPY.tooFewPeopleFrames(rate));
   }
 
-  let fill: JointAngles = found;
-  const filled: JointAngles[] = poses.map((pose) => {
-    if (pose) {
-      fill = pose;
-      return pose;
+  // Hold the last good frame across short gaps so a briefly hidden person does not snap the figure
+  // back to a default pose, and fill the lead-in with the first frame that was actually seen.
+  const first = mapped.find((frame): frame is MappedFrame => frame !== null);
+  if (!first) throw new PoseAnalyzeError("no-person", POSE_COPY.noPerson);
+  let fill: MappedFrame = first;
+  const filled: MappedFrame[] = mapped.map((frame) => {
+    if (frame) {
+      fill = frame;
+      return frame;
     }
-    return fill;
+    return { ...fill, pose: { ...fill.pose } };
   });
 
-  const smoothed = filled.map((pose, index) => {
-    if (index === 0) return pose;
-    return lerpPose(filled[index - 1], pose, 0.55);
-  });
+  normalizeHipTravel(filled);
+  const smoothed = smoothPoseSeries(filled.map((frame) => frame.pose));
 
   return encodePoseTrack({
     poses: smoothed,
@@ -108,8 +135,9 @@ export async function analyzeVideoSamples(input: {
   seek?: (timeSec: number) => Promise<unknown>;
   onProgress?: (progress: AnalyzeProgress) => void;
   analyzedAt?: string;
+  aspect?: number;
 }): Promise<PoseTrack> {
-  const fps = input.fps ?? POSE_TRACK_DEFAULT_FPS;
+  const fps = input.fps ?? sampleFpsForDuration(input.durationSec);
   const times = sampleTimes(input.durationSec, fps);
   if (times.length === 0) throw new PoseAnalyzeError("too-short", POSE_COPY.tooShort);
 
@@ -119,6 +147,9 @@ export async function analyzeVideoSamples(input: {
     input.onProgress?.({
       ratio: i / times.length,
       label: POSE_COPY.progress,
+      phase: "pose",
+      frame: i + 1,
+      frames: times.length,
     });
     if (input.seek) await input.seek(timeSec);
     try {
@@ -127,13 +158,14 @@ export async function analyzeVideoSamples(input: {
       detections.push(null);
     }
   }
-  input.onProgress?.({ ratio: 1, label: POSE_COPY.progress });
+  input.onProgress?.({ ratio: 1, label: POSE_COPY.progress, phase: "finish" });
   return buildPoseTrackFromDetections({
     durationSec: Math.min(input.durationSec, POSE_TRACK_MAX_DURATION_SEC),
     fps,
     detections,
     sourceKind: input.sourceKind,
     analyzedAt: input.analyzedAt,
+    aspect: input.aspect,
   });
 }
 
@@ -157,9 +189,15 @@ export function seekVideo(video: HTMLVideoElement, timeSec: number): Promise<voi
       reject(new PoseAnalyzeError("no-pixels", POSE_COPY.tainted));
     };
     const cleanup = () => {
+      window.clearTimeout(timer);
       video.removeEventListener("seeked", onSeeked);
       video.removeEventListener("error", onError);
     };
+    // A seek that never reports back must not freeze the whole analysis on one frame.
+    const timer = window.setTimeout(() => {
+      cleanup();
+      resolve();
+    }, 4000);
     video.addEventListener("seeked", onSeeked);
     video.addEventListener("error", onError);
     try {
@@ -171,7 +209,7 @@ export function seekVideo(video: HTMLVideoElement, timeSec: number): Promise<voi
   });
 }
 
-export function waitForVideoMetadata(video: HTMLVideoElement): Promise<void> {
+export function waitForVideoMetadata(video: HTMLVideoElement, timeoutMs = 20000): Promise<void> {
   return new Promise((resolve, reject) => {
     if (video.readyState >= 1 && Number.isFinite(video.duration)) {
       resolve();
@@ -186,9 +224,14 @@ export function waitForVideoMetadata(video: HTMLVideoElement): Promise<void> {
       reject(new PoseAnalyzeError("no-pixels", POSE_COPY.tainted));
     };
     const cleanup = () => {
+      window.clearTimeout(timer);
       video.removeEventListener("loadedmetadata", onLoaded);
       video.removeEventListener("error", onError);
     };
+    const timer = window.setTimeout(() => {
+      cleanup();
+      reject(new PoseAnalyzeError("no-pixels", POSE_COPY.unreadableFile));
+    }, timeoutMs);
     video.addEventListener("loadedmetadata", onLoaded);
     video.addEventListener("error", onError);
   });
@@ -227,7 +270,11 @@ export async function analyzeHtmlVideo(input: {
 export type ClipAnalysis = {
   track: PoseTrack;
   ocrCues: VideoTextCue[];
+  /** Share of samples in which a person was found, for honest feedback in the UI. */
+  detectionRate: number;
 };
+
+export type AnalyzeCancel = { aborted: boolean };
 
 export async function analyzeClip(input: {
   video: HTMLVideoElement;
@@ -237,28 +284,34 @@ export async function analyzeClip(input: {
   readText?: FrameTextReader["read"];
   onProgress?: (progress: AnalyzeProgress) => void;
   analyzedAt?: string;
+  cancel?: AnalyzeCancel;
 }): Promise<ClipAnalysis> {
   await waitForVideoMetadata(input.video);
   const duration = input.video.duration;
   if (!Number.isFinite(duration) || duration < 0.15) {
     throw new PoseAnalyzeError("too-short", POSE_COPY.tooShort);
   }
-  const fps = input.fps ?? POSE_TRACK_DEFAULT_FPS;
+  const fps = input.fps ?? sampleFpsForDuration(duration);
   const times = sampleTimes(duration, fps);
   if (times.length === 0) throw new PoseAnalyzeError("too-short", POSE_COPY.tooShort);
 
   const detections: Array<PoseLandmark[] | null> = [];
   const ocrCues: VideoTextCue[] = [];
   const canvas = typeof document !== "undefined" ? document.createElement("canvas") : undefined;
-  const progressLabel = input.readText
-    ? `${POSE_COPY.progress} ${POSE_COPY.ocrProgress}`
-    : POSE_COPY.progress;
+
+  const stop = () => {
+    if (input.cancel?.aborted) throw new PoseAnalyzeError("cancelled", POSE_COPY.cancelled);
+  };
 
   for (let i = 0; i < times.length; i++) {
+    stop();
     const timeSec = times[i];
     input.onProgress?.({
       ratio: i / times.length,
-      label: progressLabel,
+      label: POSE_COPY.progress,
+      phase: "pose",
+      frame: i + 1,
+      frames: times.length,
     });
     await seekVideo(input.video, timeSec);
     try {
@@ -277,13 +330,19 @@ export async function analyzeClip(input: {
       }
     }
   }
-  input.onProgress?.({ ratio: 1, label: progressLabel });
+  stop();
+  input.onProgress?.({ ratio: 1, label: POSE_COPY.finishing, phase: "finish" });
+  const aspect =
+    input.video.videoWidth > 0 && input.video.videoHeight > 0
+      ? input.video.videoWidth / input.video.videoHeight
+      : 1;
   const track = buildPoseTrackFromDetections({
     durationSec: Math.min(duration, POSE_TRACK_MAX_DURATION_SEC),
     fps,
     detections,
     sourceKind: input.sourceKind,
     analyzedAt: input.analyzedAt,
+    aspect,
   });
-  return { track, ocrCues };
+  return { track, ocrCues, detectionRate: detectionRate(detections) };
 }
