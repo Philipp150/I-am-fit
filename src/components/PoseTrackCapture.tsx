@@ -105,7 +105,7 @@ export function PoseTrackCapture({
       if (cancel.aborted) throw new PoseAnalyzeError("cancelled", POSE_COPY.cancelled);
       setReadingText(Boolean(readText));
 
-      const { track, ocrCues, detectionRate } = await analyzeClip({
+      const { track, ocrCues, detectionRate, smallPerson } = await analyzeClip({
         video,
         detect: (image, timeSec) => mediaPipeDetector.detect(image, timeSec),
         readText: readText ? (image, timeSec) => readText.read(image, timeSec) : undefined,
@@ -127,6 +127,7 @@ export function PoseTrackCapture({
       const notes: string[] = [];
       if (video.duration > 90) notes.push(POSE_COPY.truncated);
       if (detectionRate < 0.85) notes.push(POSE_COPY.partial(detectionRate));
+      if (smallPerson) notes.push(POSE_COPY.personSmall);
       if (suggestion.foundText) notes.push(POSE_COPY.ocrApplied);
       setNote(notes.length ? notes.join(" ") : null);
     } catch (err) {

@@ -1,8 +1,12 @@
 import type { JointAngles } from "./poses";
 import {
+  applyClipOrientation,
+  dropOrientationOutliers,
   landmarksHavePerson,
   mapLandmarksToFrame,
   normalizeHipTravel,
+  SMALL_TORSO_LEN,
+  median,
   type MappedFrame,
   type PoseLandmark,
 } from "./pose-map";
@@ -74,7 +78,15 @@ export function detectionRate(detections: Array<PoseLandmark[] | null>): number 
   return hits / detections.length;
 }
 
-export function buildPoseTrackFromDetections(input: {
+export type TrackFromDetections = {
+  track: PoseTrack;
+  /** Share of samples that ended up in the track. */
+  detectionRate: number;
+  /** The person was far enough away that the angles are rough. */
+  smallPerson: boolean;
+};
+
+export type DetectionsInput = {
   durationSec: number;
   fps?: number;
   detections: Array<PoseLandmark[] | null>;
@@ -82,7 +94,13 @@ export function buildPoseTrackFromDetections(input: {
   analyzedAt?: string;
   /** Video width / height, so angles are not skewed by portrait or widescreen framing. */
   aspect?: number;
-}): PoseTrack {
+};
+
+export function buildPoseTrackFromDetections(input: DetectionsInput): PoseTrack {
+  return trackFromDetections(input).track;
+}
+
+export function trackFromDetections(input: DetectionsInput): TrackFromDetections {
   const fps = input.fps ?? POSE_TRACK_DEFAULT_FPS;
   const durationSec = Math.min(POSE_TRACK_MAX_DURATION_SEC, Math.max(0, input.durationSec));
   if (durationSec < 0.15 || input.detections.length === 0) {
@@ -91,23 +109,35 @@ export function buildPoseTrackFromDetections(input: {
 
   const mapped: Array<MappedFrame | null> = [];
   let previous: JointAngles | undefined;
+  let sawPerson = 0;
   for (const detection of input.detections) {
+    if (detection && landmarksHavePerson(detection)) sawPerson += 1;
     const frame = detection ? mapLandmarksToFrame(detection, { previous, aspect: input.aspect }) : null;
     if (frame) previous = frame.pose;
     mapped.push(frame);
   }
 
-  const rate = mapped.filter(Boolean).length / mapped.length;
+  const sized = mapped.filter((frame): frame is MappedFrame => frame !== null);
+  const { kept, dominant } = dropOrientationOutliers(sized);
+  const keptSet = new Set(kept);
+  const usable = mapped.map((frame) => (frame && keptSet.has(frame) ? frame : null));
+
+  const rate = kept.length / mapped.length;
   if (rate < MIN_DETECTION_RATE) {
+    // A person who was seen but always too small is a different problem than no person at all.
+    if (sawPerson / mapped.length >= MIN_DETECTION_RATE && sized.length === 0) {
+      throw new PoseAnalyzeError("no-person", POSE_COPY.personTooSmall);
+    }
     throw new PoseAnalyzeError("no-person", rate === 0 ? POSE_COPY.noPerson : POSE_COPY.tooFewPeopleFrames(rate));
   }
 
+  applyClipOrientation(kept, dominant);
+  normalizeHipTravel(kept);
+
   // Hold the last good frame across short gaps so a briefly hidden person does not snap the figure
   // back to a default pose, and fill the lead-in with the first frame that was actually seen.
-  const first = mapped.find((frame): frame is MappedFrame => frame !== null);
-  if (!first) throw new PoseAnalyzeError("no-person", POSE_COPY.noPerson);
-  let fill: MappedFrame = first;
-  const filled: MappedFrame[] = mapped.map((frame) => {
+  let fill: MappedFrame = kept[0];
+  const filled: MappedFrame[] = usable.map((frame) => {
     if (frame) {
       fill = frame;
       return frame;
@@ -115,16 +145,19 @@ export function buildPoseTrackFromDetections(input: {
     return { ...fill, pose: { ...fill.pose } };
   });
 
-  normalizeHipTravel(filled);
   const smoothed = smoothPoseSeries(filled.map((frame) => frame.pose));
 
-  return encodePoseTrack({
-    poses: smoothed,
-    durationSec,
-    fps,
-    sourceKind: input.sourceKind,
-    analyzedAt: input.analyzedAt,
-  });
+  return {
+    track: encodePoseTrack({
+      poses: smoothed,
+      durationSec,
+      fps,
+      sourceKind: input.sourceKind,
+      analyzedAt: input.analyzedAt,
+    }),
+    detectionRate: rate,
+    smallPerson: median(kept.map((frame) => frame.torsoLen)) < SMALL_TORSO_LEN,
+  };
 }
 
 export async function analyzeVideoSamples(input: {
@@ -272,6 +305,7 @@ export type ClipAnalysis = {
   ocrCues: VideoTextCue[];
   /** Share of samples in which a person was found, for honest feedback in the UI. */
   detectionRate: number;
+  smallPerson: boolean;
 };
 
 export type AnalyzeCancel = { aborted: boolean };
@@ -336,7 +370,7 @@ export async function analyzeClip(input: {
     input.video.videoWidth > 0 && input.video.videoHeight > 0
       ? input.video.videoWidth / input.video.videoHeight
       : 1;
-  const track = buildPoseTrackFromDetections({
+  const result = trackFromDetections({
     durationSec: Math.min(duration, POSE_TRACK_MAX_DURATION_SEC),
     fps,
     detections,
@@ -344,5 +378,5 @@ export async function analyzeClip(input: {
     analyzedAt: input.analyzedAt,
     aspect,
   });
-  return { track, ocrCues, detectionRate: detectionRate(detections) };
+  return { ...result, ocrCues };
 }

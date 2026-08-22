@@ -8,6 +8,10 @@ export const POSE_COPY = {
   cancelled: "Erkennen abgebrochen. Du kannst es jederzeit neu starten.",
   retry: "Noch einmal versuchen",
   frameCount: (frame: number, frames: number) => `Bild ${frame} von ${frames}`,
+  personTooSmall:
+    "Die Person ist im Bild zu klein für eine Bewegungsspur. Filme näher dran oder schneide den Clip enger zu.",
+  personSmall:
+    "Die Person ist recht klein im Bild – die Spur bleibt grob. Näher dran gefilmt wird die Figur genauer.",
   tooFewPeopleFrames: (rate: number) =>
     `Nur in ${Math.round(rate * 100)} % der Bilder war eine Person zu sehen – zu wenig für eine Bewegungsspur. Nimm einen Clip, in dem der ganze Körper ruhig im Bild bleibt.`,
   partial: (rate: number) =>

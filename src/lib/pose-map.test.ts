@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { POSES } from "./poses";
 import {
+  applyClipOrientation,
+  circularMeanDeg,
+  dropOrientationOutliers,
   FIGURE_HIP_X,
   FIGURE_HIP_Y,
   landmarkConfidence,
@@ -124,15 +127,27 @@ describe("MediaPipe landmarks to mannequin", () => {
     expect(landmarkConfidence(standingLandmarks())).toBeGreaterThan(0.9);
   });
 
-  it("holds the last angle for a joint that drops below the visibility floor", () => {
-    const previous = landmarksToJointAngles(standingLandmarks());
+  it("relaxes a joint that disappears instead of freezing it at a stray angle", () => {
     const armGone = standingLandmarks().map((point, index) =>
       index === MP.RIGHT_ELBOW || index === MP.RIGHT_WRIST ? { ...point, visibility: 0.02 } : point,
     );
-    const pose = landmarksToJointAngles(armGone, { previous });
-    expect(pose.leftUpperArm).toBeCloseTo(previous.leftUpperArm, 5);
-    expect(pose.leftForearm).toBeCloseTo(previous.leftForearm, 5);
-    expect(pose.rightUpperArm).toBeCloseTo(previous.rightUpperArm, 5);
+    const stray = { ...landmarksToJointAngles(standingLandmarks(), {}), leftUpperArm: 150, leftForearm: -120 };
+
+    const next = landmarksToJointAngles(armGone, { previous: stray });
+    expect(Math.abs(next.leftUpperArm)).toBeLessThan(150);
+    // The other arm is still visible, so it keeps being measured rather than drifting.
+    expect(next.rightUpperArm).toBeCloseTo(stray.rightUpperArm, 0);
+
+    let drifting = stray;
+    let previousGap = Math.abs(drifting.leftUpperArm - POSES.stand.leftUpperArm);
+    for (let i = 0; i < 60; i++) {
+      drifting = landmarksToJointAngles(armGone, { previous: drifting });
+      const gap = Math.abs(drifting.leftUpperArm - POSES.stand.leftUpperArm);
+      expect(gap).toBeLessThanOrEqual(previousGap);
+      previousGap = gap;
+    }
+    expect(drifting.leftUpperArm).toBe(POSES.stand.leftUpperArm);
+    expect(drifting.leftForearm).toBe(POSES.stand.leftForearm);
   });
 
   it("leaves no leftover shrug, head shift or chest bias in a track frame", () => {
@@ -145,9 +160,75 @@ describe("MediaPipe landmarks to mannequin", () => {
   });
 });
 
+describe("clip orientation", () => {
+  function spineFrame(spine: number, confidence = 1): MappedFrame {
+    return {
+      pose: { ...POSES.stand },
+      spine,
+      leftThighWorld: spine + 10,
+      rightThighWorld: spine - 10,
+      hipX: 0.5,
+      hipY: 0.5,
+      torsoLen: 0.24,
+      confidence,
+    };
+  }
+
+  it("averages angles as directions, not as numbers", () => {
+    expect(Math.abs(circularMeanDeg([{ deg: 179 }, { deg: -179 }]))).toBeCloseTo(180, 3);
+    expect(circularMeanDeg([{ deg: 10 }, { deg: -10 }])).toBeCloseTo(0, 3);
+  });
+
+  it("throws away frames where the detector flipped the person upside down", () => {
+    const frames = [
+      spineFrame(2),
+      spineFrame(-1),
+      spineFrame(178),
+      spineFrame(-176),
+      spineFrame(3),
+      spineFrame(0),
+    ];
+    const { kept, dominant } = dropOrientationOutliers(frames);
+    expect(kept).toHaveLength(4);
+    expect(Math.abs(dominant)).toBeLessThan(10);
+  });
+
+  it("keeps a clip that is lying down from start to end", () => {
+    const frames = [spineFrame(88), spineFrame(92), spineFrame(85), spineFrame(95)];
+    const { kept, dominant } = dropOrientationOutliers(frames);
+    expect(kept).toHaveLength(4);
+    expect(dominant).toBeGreaterThan(80);
+  });
+
+  it("decides the tilt once per clip so an upright figure never flips mid clip", () => {
+    const frames = [spineFrame(4), spineFrame(-6), spineFrame(9)];
+    applyClipOrientation(frames, 2);
+    expect(frames.map((frame) => frame.pose.bodyTilt)).toEqual([0, 0, 0]);
+    expect(frames[1].pose.torso).toBeCloseTo(-6, 1);
+    expect(frames[1].pose.leftThigh).toBeCloseTo(4, 1);
+  });
+
+  it("moves a lying clip into the root group so the legs turn with the body", () => {
+    const frames = [spineFrame(88), spineFrame(92)];
+    applyClipOrientation(frames, 90);
+    expect(frames[0].pose.bodyTilt).toBeCloseTo(90, 1);
+    expect(frames[0].pose.torso).toBeCloseTo(-2, 1);
+    expect(frames[0].pose.leftThigh).toBeCloseTo(8, 1);
+  });
+});
+
 describe("hip travel normalization", () => {
   function frame(hipX: number, hipY: number, torsoLen = 0.24): MappedFrame {
-    return { pose: { ...POSES.stand }, hipX, hipY, torsoLen, confidence: 1 };
+    return {
+      pose: { ...POSES.stand },
+      spine: 0,
+      leftThighWorld: 0,
+      rightThighWorld: 0,
+      hipX,
+      hipY,
+      torsoLen,
+      confidence: 1,
+    };
   }
 
   it("centres the resting hip on the drawing and scales travel by body size", () => {

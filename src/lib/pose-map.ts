@@ -45,6 +45,24 @@ const CORE = [
 export const MIN_CORE_VISIBLE = 4;
 export const VISIBILITY_MIN = 0.35;
 
+/** Shoulder-to-hip distance, relative to the frame height, below which the detection is guesswork. */
+export const MIN_TORSO_LEN = 0.06;
+/** Below this the person is far enough away that the track is worth a warning. */
+export const SMALL_TORSO_LEN = 0.12;
+/**
+ * A clip has one dominant body orientation. When a frame claims the person flipped by more than
+ * this it is a detection failure, not a movement — nobody turns 90 degrees between two samples.
+ */
+export const MAX_SPINE_DEVIATION = 70;
+
+/**
+ * How fast a joint we cannot see any more drifts back to the neutral pose. Freezing it instead
+ * meant one bad detection could leave an arm stuck at a strange angle for the rest of the clip.
+ */
+export const REST_DECAY = 0.12;
+/** Distance to neutral, in degrees, at which the drift stops fading and just arrives. */
+export const REST_SNAP = 1;
+
 const DEG = 180 / Math.PI;
 
 /**
@@ -125,6 +143,14 @@ export function svgAngleUp(from: { x: number; y: number }, to: { x: number; y: n
   return normalizeDeg(Math.atan2(to.x - from.x, -(to.y - from.y)) * DEG);
 }
 
+function relax(held: number, rest: number): number {
+  const delta = normalizeDeg(rest - held);
+  // Geometric decay alone never arrives, and a joint parked a degree off neutral for the rest of
+  // the clip is both invisible and a needless difference between two otherwise identical frames.
+  if (Math.abs(delta) < REST_SNAP) return rest;
+  return held + delta * REST_DECAY;
+}
+
 function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return Math.min(max, Math.max(min, 0));
   return Math.min(max, Math.max(min, value));
@@ -157,11 +183,16 @@ export type MapOptions = {
 };
 
 /**
- * One analyzed video frame. Angles are ready for the mannequin; the hip fields stay in
- * aspect-corrected image units so the whole clip can be re-centred and re-scaled afterwards.
+ * One analyzed video frame. Limb angles are ready for the mannequin, but everything that depends
+ * on how the clip as a whole is oriented or framed is left to a second pass over all frames:
+ * `spine` and the thigh angles are still world angles, and the hip position is in aspect-corrected
+ * image units.
  */
 export type MappedFrame = {
   pose: JointAngles;
+  spine: number;
+  leftThighWorld: number;
+  rightThighWorld: number;
   hipX: number;
   hipY: number;
   torsoLen: number;
@@ -174,27 +205,28 @@ function limbChain(
   side: Side,
   parentWorld: number,
   base: { upper: number; fore: number; hand: number },
+  rest: { upper: number; fore: number; hand: number },
 ): { upper: number; fore: number; hand: number } {
   const shoulder = pt(landmarks, side.shoulder, aspect);
   const elbow = pt(landmarks, side.elbow, aspect);
   const wrist = pt(landmarks, side.wrist, aspect);
   const finger = pt(landmarks, side.index, aspect);
 
-  let upper = base.upper;
-  let upperWorld = parentWorld + base.upper;
+  let upper = relax(base.upper, rest.upper);
+  let upperWorld = parentWorld + upper;
   if (seen(shoulder) && seen(elbow)) {
     upperWorld = svgAngleDown(shoulder, elbow);
     upper = normalizeDeg(upperWorld - parentWorld);
   }
 
-  let fore = base.fore;
-  let foreWorld = upperWorld + base.fore;
+  let fore = relax(base.fore, rest.fore);
+  let foreWorld = upperWorld + fore;
   if (seen(elbow) && seen(wrist)) {
     foreWorld = svgAngleDown(elbow, wrist);
     fore = normalizeDeg(foreWorld - upperWorld);
   }
 
-  let hand = base.hand;
+  let hand = relax(base.hand, rest.hand);
   if (seen(wrist) && seen(finger)) {
     hand = normalizeDeg(svgAngleDown(wrist, finger) - foreWorld);
   }
@@ -210,26 +242,22 @@ function legChain(
   landmarks: PoseLandmark[],
   aspect: number,
   side: Side,
-  parentWorld: number,
-  base: { thigh: number; shin: number },
-): { thigh: number; shin: number } {
+  fallbackWorld: number,
+  baseShin: number,
+  restThigh: number,
+  restShin: number,
+): { thighWorld: number; shin: number } {
   const hip = pt(landmarks, side.hip, aspect);
   const knee = pt(landmarks, side.knee, aspect);
   const ankle = pt(landmarks, side.ankle, aspect);
 
-  let thigh = base.thigh;
-  let thighWorld = parentWorld + base.thigh;
-  if (seen(hip) && seen(knee)) {
-    thighWorld = svgAngleDown(hip, knee);
-    thigh = normalizeDeg(thighWorld - parentWorld);
-  }
+  let thighWorld = relax(fallbackWorld, restThigh);
+  if (seen(hip) && seen(knee)) thighWorld = svgAngleDown(hip, knee);
 
-  let shin = base.shin;
-  if (seen(knee) && seen(ankle)) {
-    shin = normalizeDeg(svgAngleDown(knee, ankle) - thighWorld);
-  }
+  let shin = relax(baseShin, restShin);
+  if (seen(knee) && seen(ankle)) shin = normalizeDeg(svgAngleDown(knee, ankle) - thighWorld);
 
-  return { thigh: clamp(thigh, -170, 170), shin: clamp(shin, -170, 170) };
+  return { thighWorld, shin: clamp(shin, -170, 170) };
 }
 
 /** Map one MediaPipe detection onto the StickFigure FK skeleton. `null` means "no usable person". */
@@ -247,32 +275,46 @@ export function mapLandmarksToFrame(landmarks: PoseLandmark[], options: MapOptio
   const hip = mid(leftHip, rightHip);
   const shoulder = mid(leftShoulder, rightShoulder);
   const torsoLen = Math.hypot(shoulder.x - hip.x, shoulder.y - hip.y);
-  if (!(torsoLen > 1e-4)) return null;
+  if (torsoLen < MIN_TORSO_LEN) return null;
 
-  // The spine angle is split so that a lying body also turns the legs (bodyTilt is the root group).
   const spine = svgAngleUp(hip, shoulder);
-  const bodyTilt = Math.abs(spine) > 55 ? clamp(spine, -150, 150) : 0;
-  const torso = clamp(normalizeDeg(spine - bodyTilt), -100, 100);
-  const torsoWorld = bodyTilt + torso;
+  const torsoWorld = spine;
 
-  const left = limbChain(landmarks, aspect, SCREEN_LEFT, torsoWorld, {
-    upper: base.leftUpperArm,
-    fore: base.leftForearm,
-    hand: base.leftHand ?? 0,
-  });
-  const right = limbChain(landmarks, aspect, SCREEN_RIGHT, torsoWorld, {
-    upper: base.rightUpperArm,
-    fore: base.rightForearm,
-    hand: base.rightHand ?? 0,
-  });
-  const leftLeg = legChain(landmarks, aspect, SCREEN_LEFT, bodyTilt, {
-    thigh: base.leftThigh,
-    shin: base.leftShin,
-  });
-  const rightLeg = legChain(landmarks, aspect, SCREEN_RIGHT, bodyTilt, {
-    thigh: base.rightThigh,
-    shin: base.rightShin,
-  });
+  const rest = POSES.stand;
+  const left = limbChain(
+    landmarks,
+    aspect,
+    SCREEN_LEFT,
+    torsoWorld,
+    { upper: base.leftUpperArm, fore: base.leftForearm, hand: base.leftHand ?? 0 },
+    { upper: rest.leftUpperArm, fore: rest.leftForearm, hand: rest.leftHand ?? 0 },
+  );
+  const right = limbChain(
+    landmarks,
+    aspect,
+    SCREEN_RIGHT,
+    torsoWorld,
+    { upper: base.rightUpperArm, fore: base.rightForearm, hand: base.rightHand ?? 0 },
+    { upper: rest.rightUpperArm, fore: rest.rightForearm, hand: rest.rightHand ?? 0 },
+  );
+  const leftLeg = legChain(
+    landmarks,
+    aspect,
+    SCREEN_LEFT,
+    base.leftThigh,
+    base.leftShin,
+    rest.leftThigh,
+    rest.leftShin,
+  );
+  const rightLeg = legChain(
+    landmarks,
+    aspect,
+    SCREEN_RIGHT,
+    base.rightThigh,
+    base.rightShin,
+    rest.rightThigh,
+    rest.rightShin,
+  );
 
   // The neck bone points up out of the torso, so it is measured from up, not from down.
   const leftEar = pt(landmarks, MP.LEFT_EAR, aspect);
@@ -283,11 +325,11 @@ export function mapLandmarksToFrame(landmarks: PoseLandmark[], options: MapOptio
 
   return {
     pose: {
-      // Placeholders: the whole clip is re-centred and re-scaled once all frames are known.
+      // Placeholders: hip travel and the tilt/torso split need the whole clip, see below.
       hipX: FIGURE_HIP_X,
       hipY: FIGURE_HIP_Y,
-      bodyTilt: round1(bodyTilt),
-      torso: round1(torso),
+      bodyTilt: 0,
+      torso: clamp(spine, -100, 100),
       neck: round1(neck),
       jaw: 0,
       leftUpperArm: round1(left.upper),
@@ -296,9 +338,9 @@ export function mapLandmarksToFrame(landmarks: PoseLandmark[], options: MapOptio
       rightUpperArm: round1(right.upper),
       rightForearm: round1(right.fore),
       rightHand: round1(right.hand),
-      leftThigh: round1(leftLeg.thigh),
+      leftThigh: round1(clamp(leftLeg.thighWorld, -170, 170)),
       leftShin: round1(leftLeg.shin),
-      rightThigh: round1(rightLeg.thigh),
+      rightThigh: round1(clamp(rightLeg.thighWorld, -170, 170)),
       rightShin: round1(rightLeg.shin),
       // A single camera view cannot tell a shrug, a head shift or a chest turn apart from
       // perspective, and guessing them biased every frame. They stay neutral for tracks.
@@ -307,11 +349,61 @@ export function mapLandmarksToFrame(landmarks: PoseLandmark[], options: MapOptio
       headShiftY: 0,
       chest: 0,
     },
+    spine,
+    leftThighWorld: leftLeg.thighWorld,
+    rightThighWorld: rightLeg.thighWorld,
     hipX: hip.x,
     hipY: hip.y,
     torsoLen,
     confidence: landmarkConfidence(landmarks),
   };
+}
+
+/** Average of angles as directions, so 179° and -179° average to 180° and not to 0°. */
+export function circularMeanDeg(values: Array<{ deg: number; weight?: number }>): number {
+  let x = 0;
+  let y = 0;
+  for (const { deg, weight = 1 } of values) {
+    const rad = (deg * Math.PI) / 180;
+    x += Math.cos(rad) * weight;
+    y += Math.sin(rad) * weight;
+  }
+  if (Math.abs(x) < 1e-9 && Math.abs(y) < 1e-9) return 0;
+  return (Math.atan2(y, x) * 180) / Math.PI;
+}
+
+export function angularDistance(a: number, b: number): number {
+  return Math.abs(normalizeDeg(a - b));
+}
+
+/**
+ * Frames where the detector decided the person is upside down or sideways while the rest of the
+ * clip disagrees. BlazePose does that on dark or grainy footage, and a single flipped frame throws
+ * the figure across the picture.
+ */
+export function dropOrientationOutliers(frames: MappedFrame[]): { kept: MappedFrame[]; dominant: number } {
+  if (frames.length === 0) return { kept: [], dominant: 0 };
+  const first = circularMeanDeg(frames.map((frame) => ({ deg: frame.spine, weight: frame.confidence })));
+  const kept = frames.filter((frame) => angularDistance(frame.spine, first) <= MAX_SPINE_DEVIATION);
+  if (kept.length === 0) return { kept: frames, dominant: first };
+  const dominant = circularMeanDeg(kept.map((frame) => ({ deg: frame.spine, weight: frame.confidence })));
+  return { kept, dominant };
+}
+
+/**
+ * Decide once per clip how much of the spine belongs to the root group (which also carries the
+ * legs) and how much is torso bend. Deciding this per frame made a standing figure flip onto its
+ * back and up again whenever a single detection wobbled past the threshold.
+ */
+export function applyClipOrientation(frames: MappedFrame[], dominant: number): void {
+  const lying = Math.abs(dominant) > 55;
+  const bodyTilt = lying ? round1(clamp(dominant, -150, 150)) : 0;
+  for (const frame of frames) {
+    frame.pose.bodyTilt = bodyTilt;
+    frame.pose.torso = round1(clamp(normalizeDeg(frame.spine - bodyTilt), -100, 100));
+    frame.pose.leftThigh = round1(clamp(normalizeDeg(frame.leftThighWorld - bodyTilt), -170, 170));
+    frame.pose.rightThigh = round1(clamp(normalizeDeg(frame.rightThighWorld - bodyTilt), -170, 170));
+  }
 }
 
 export function landmarksToJointAngles(landmarks: PoseLandmark[], options: MapOptions = {}): JointAngles {
